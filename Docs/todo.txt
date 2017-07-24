@@ -1,0 +1,27 @@
+use script  read out (average) strain on random locations (areas) of the mesh
+
+create git
+
+apply random forces on cube 
+
+add noise to cube edges
+
+test the data extraction by visualising it next to the model
+
+run freecad script outside of freecad and with other libraries  (Anaconda Python IDE)
+
+user proper mesh (simplified) for afo
+
+how to simulate stress applied by force from another object in freecad?
+
+add forces from opensim biomechanics
+
+simulate the sensor grid starting from a flat surface, curving it into a mesh, ginving initial stretch data and realistic positioning
+
+
+
+extra: 
+from forum->test freecad build to sample selected data points
+
+
+

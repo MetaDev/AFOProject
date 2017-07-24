@@ -1,0 +1,15 @@
+simulate influence of AFO on movement 
+-> possible if parameteres used in AFO simulation of Opensim are available for physical AFO
+
+Is there data available of AFO stress during movement?
+
+
+following: https://www.freecadweb.org/wiki/Import_from_STL_or_OBJ
+I can create a shape seemingly without holes, but still the FEM in FreeCAD "hangs" (could be due to complexity of shape) but after 10 min no result
+A mesh created withing freecad does work
+-> I create a simple shape and continue from there
+
+What assumptions can I make about the network sensors?
+Do I know the distribution on the surface, the information of neighbour sensors?
+
+

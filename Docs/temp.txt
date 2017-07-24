@@ -1,0 +1,14 @@
+in https://forum.freecadweb.org/viewtopic.php?f=18&t=20801 there is a branch for freecad where the stress at a point is calculated
+
+script to deform meshes: https://www.freecadweb.org/wiki/Scripted_objects
+
+
+research previous work on machine learning for extraction forces from stress sensor: https://www.ipr.kit.edu/english/315_603.php
+
+if FEM in freecad is too slow, there is an alternative: http://sfepy.org/doc-devel/preprocessing.html
+
+min/max/med principal stress is representative for all stress in an element (max shear and von mises stress are derived from them)
+
+documentation for FEM results : https://www.freecadweb.org/api/d3/d81/classFem_1_1FemResultObject.html
+
+http://idlabintra.intec.ugent.be/
