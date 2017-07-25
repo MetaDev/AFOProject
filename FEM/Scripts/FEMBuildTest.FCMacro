@@ -169,7 +169,10 @@ for m in FreeCAD.ActiveDocument.Objects:
 
 # I don't know how the nodes in a mesh are distributed, for a uniform sampling I sample the mesh and not the nodesp
 
-print(fmObj.FemMesh.Nodes.values())
+
+#TODO figure out to get the triangles from the femmesh not the part
+print([fmObj.FemMesh.getNodesByFace(f) for f in box.Faces])
+print(dir(fmObj.FemMesh))
 #print(getRandomStrainsOnPart(box,fmObj,result_object,10))
 #print(dir(result_object))
 #print(fmObj.FemMesh.getNodeById(1) )

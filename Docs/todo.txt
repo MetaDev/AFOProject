@@ -1,10 +1,14 @@
-use script  read out (average) strain on random locations (areas) of the mesh
 
-create git
 
-apply random forces on cube 
+apply random load in the force on the cube 
 
-add noise to cube edges
+add noise to femmesh
+
+create scene where one object displaces the other
+use a shell
+
+improve saampling of strains
+
 
 test the data extraction by visualising it next to the model
 
