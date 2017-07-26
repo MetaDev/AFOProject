@@ -8,7 +8,7 @@ import ObjectsFem
 import itertools
 
 data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
-
+#to run this script open Freecad, create new file and run execfile("C:\Users\Administrator\Google Drive\Windows\Research\Project\FEM\Scripts\FEMSimple.FCMacro")
 
 def clearAll():
     doc = App.ActiveDocument
@@ -111,25 +111,30 @@ n_vec = 10
 rand_node_i = np.random.choice(
     range(len(femmesh_obj_gmsh.FemMesh.Nodes)), size=n_vec).astype(int)
 
-n_disp = 1
-disp_range = np.linspace(-0.2, 0.2, num=n_disp)
-
+N_DISP = 1
+disp_range = np.linspace(-0.2, 0.2, num=N_DISP)
+print(disp_range)
 displacements = itertools.combinations(disp_range, 1)
+print("kak"+ str(list(displacements)))
 strains = []
+
 for disp in displacements:
+    print(disp[0])
     displ_constraint.xDisplacement = 0
     displ_constraint.yDisplacement = disp[0]
     displ_constraint.zDisplacement = 0
-
+    
     fea.update_objects()
     # a string is returned, the string should be empty
     fea.check_prerequisites()
+   
     fea.reset_all()
     fea.run()
 
     fea.load_results()
     result_object = App.ActiveDocument.getObject(
         "CalculiX_static_results")
+    print(result_object.StrainVectors)
 
 # run the analysis
 
@@ -137,18 +142,18 @@ for disp in displacements:
                   for i in rand_node_i]
     strains.append([result_object.StrainVectors[i] for i in rand_node_i])
 
-
-def print_results(strains_list, displacements):
+def print_results(strains_list, disp_list):
     # convert to numpy array
     strain_arr = np.array([[vectorToNPArr(v) for v in strains]
                            for strains in strains_list])
-    disp_arr = np.array(displacements)
+    disp_arr = np.array(disp_list)
     np.save(data_path + "\\strain_list", strain_arr)
     np.save(data_path + "\\displacement_list", disp_arr)
-
-
-print_results(strains, displacements)
+print( np.array([[vectorToNPArr(v) for v in strains]
+                           for strains in strains]))
+print( np.array(list(displacements)))
+print_results(strains, list(displacements))
 # post processing of the result
 # femmesh_obj_gmsh.ViewObject.setNodeDisplacementByVectors(result_object.NodeNumbers, result_object.DisplacementVectors)
 # femmesh_obj_gmsh.ViewObject.setNodeColorByScalars(result_object.NodeNumbers, result_object.StrainVectors)
-# femmesh_obj_gmsh.ViewObject.applyDisplacement(10)
+# femmesh_obj_gmsh.ViewObject.applyDisplacement(10)    
