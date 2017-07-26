@@ -1,13 +1,14 @@
 
 
-apply random load in the force on the cube 
-
 add noise to femmesh
 
-create scene where one object displaces the other
+create scene where one object displaces the other use contact constraints
 use a shell
 
-improve saampling of strains
+improve sampling of strains
+
+#TODO first we assume a fixed random sensor
+#the next step would be to generalize to multiple sensors
 
 
 test the data extraction by visualising it next to the model
