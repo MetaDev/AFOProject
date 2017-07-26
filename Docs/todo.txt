@@ -1,5 +1,9 @@
 
 
+http://machinelearningmastery.com/regression-tutorial-keras-deep-learning-library-python/
+
+
+
 add noise to femmesh
 
 create scene where one object displaces the other use contact constraints
@@ -7,8 +11,10 @@ use a shell
 
 improve sampling of strains
 
+#data realism
 #TODO first we assume a fixed random sensor
 #the next step would be to generalize to multiple sensors
+the step afterwards is to reduce the 3D strain to 1D according to an (random?) axis on the surface of the mesh
 
 
 test the data extraction by visualising it next to the model
