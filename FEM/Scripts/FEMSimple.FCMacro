@@ -18,7 +18,87 @@ def clearAll():
 
 def vectorToNPArr(v):
     return np.array([v.x, v.y, v.z])
+def GetNodesFromFEMMrshSurface(femmesh):
+    return np.unique(np.array([list(femmesh.getElementNodes(f)) for f in femmesh.Faces ]))
+#a and b are np arrays
+def normalize(v):
+    return v/np.linalg.norm(v)
 
+def getVectorToVectorRotation(a,b):
+    a=normalize(a)
+    b= normalize(b)
+    v = np.multiply(a,b)
+    s=np.linalg.norm(v)
+    #same vector
+    if(s<0.0001):
+        return np.eye(3)
+    c=np.dot(a,b)
+    #opposite vector
+    if(np.abs(c+1)<0.0001):
+        R=np.eye(3)
+        R[2,2]=-1
+        return R
+    v_x=[[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]]
+    return np.eye(3)+v_x+(np.array(v_x)**2)*(1/(1+c))
+#assumes that the first 3 nodes in a FEMMesh element are the definingvertexes of the triangle or face
+#see: https://www.freecadweb.org/wiki/FEM_Mesh -> triangle element
+def getNPVertexFromFEMMeshface(face_id):
+    six_node_ids = femmesh.getElementNodes(face_id)
+    return np.array([vectorToNPArr(femmesh.Nodes[six_node_ids[0]]),
+                    vectorToNPArr(femmesh.Nodes[six_node_ids[1]]),
+                    vectorToNPArr(femmesh.Nodes[six_node_ids[2]])])
+def getFaceFromNode(node_id, femmesh):
+    for face in femmesh.Faces:
+        if (node_id in femmesh.getElementNodes(face)):
+            return face
+#expects 3 vertexes in numpy format
+#Calculate the normal for all the triangles, by taking the cross product of the vectors v1-v0, and v2-v0 in each triangle    
+def getNormalOfTriangle(vertexes):
+    print("norm of vertexes" + str(normalize(np.cross(vertexes[1]-vertexes[0],vertexes[2]-vertexes[0]))))
+    return normalize(np.cross(vertexes[1]-vertexes[0],vertexes[2]-vertexes[0]))
+def getNormalOfNodes(node_ids,femmesh):
+    #get all faces of a node
+    nodeTriangles={id: [] for id in node_ids}
+    triangleNormal = {}
+    for face in femmesh.Faces:
+        triangleNormal[face]=getNormalOfTriangle(getNPVertexFromFEMMeshface(face))
+
+        for id in node_ids:
+            if (id in femmesh.getElementNodes(face)):
+                nodeTriangles[id].append(face)
+    
+    #calculate average normal of each node
+    return [np.average(np.array([triangleNormal[triangle_id] 
+                        for triangle_id in nodeTriangles[node_id]]),axis=0) 
+                        for node_id in node_ids]
+
+
+
+#warning this method works only for strain vectors with smooth adjacent triangels
+#strains are vectors according to the global coordinate system
+#convert to local coordinate system of the normal of the respective triangle 
+#project onto triangle plane
+#rotate randomly (save the rotation as sensor configuration) around origin
+def projectStrainVector3DOnMesh(strain_vec, tri_norm):
+    #convert to local coordinate system by rotating (origin is the same, no translation)
+    global_norm=np.array([0,0,1])
+    R = getVectorToVectorRotation(global_norm,tri_norm)
+
+    strain_vec = vectorToNPArr(strain_vec)
+    
+    #Ra=b, rotate 
+    strain_vec_tri = np.dot(R,strain_vec)
+    #project on triangle plane, our coordinate axis this plane
+    proj_plane_strain=strain_vec_tri*np.array([1,1,0])
+    #project on random axis of the triangle plane (x,y plane) do to coordinate system
+    rand_theta = np.random.random()*2*np.pi
+    rand_axis=np.array([np.cos(rand_theta),np.sin(rand_theta),0])
+    
+    #rand axis is a unit vector, thus the dot product isn't divided by it's length
+    proj_axis_strain=rand_axis*(np.dot(proj_plane_strain,rand_axis))
+    
+    #return the size of this vector
+    return np.linalg.norm(proj_axis_strain)
 
 clearAll()
 doc = App.ActiveDocument
@@ -82,7 +162,7 @@ femmesh_obj_gmsh.Part = box_obj
 App.ActiveDocument.recompute()
 gmsh_mesh = FemGmshTools.FemGmshTools(femmesh_obj_gmsh)
 error = gmsh_mesh.create_mesh()
-print error
+print (error)
 App.ActiveDocument.recompute()
 
 # mesh
@@ -107,16 +187,22 @@ doc.Analysis.Member = doc.Analysis.Member + [displ_constraint]
 
 # number of sensors
 n_vec = 10
+femmesh=femmesh_obj_gmsh.FemMesh
+faceNodes = GetNodesFromFEMMrshSurface(femmesh)
+
 # calculate random location of sensors, the same for every generated sample
 rand_node_i = np.random.choice(
-    range(len(femmesh_obj_gmsh.FemMesh.Nodes)), size=n_vec).astype(int)
+    range(len(faceNodes)), size=n_vec).astype(int)
 
-n_disp = 1000
+n_disp = 1
 disp_range = np.linspace(-0.2, 0.2, num=n_disp)
 
 displacements = list(itertools.combinations(disp_range, 1))
-strains = []
-print(displacements)
+mesh_normals = getNormalOfNodes(rand_node_i,femmesh)
+rand_nodes = [faceNodes[i] for i in rand_node_i]
+
+strains =[]
+
 for disp in displacements:
     displ_constraint.xDisplacement = 0
     displ_constraint.yDisplacement = disp[0]
@@ -134,19 +220,25 @@ for disp in displacements:
 
 # run the analysis
 
-    rand_nodes = [femmesh_obj_gmsh.FemMesh.Nodes[i]
-                  for i in rand_node_i]
-    strains.append([result_object.StrainVectors[i] for i in rand_node_i])
+   
+    
+    nodes_strains_1D =[projectStrainVector3DOnMesh(result_object.StrainVectors[i],n)
+                             for i,n in zip(rand_nodes,mesh_normals)]
+    strains.append(nodes_strains_1D)
 
-
+flatten = lambda lst: reduce(lambda l, i: l + flatten(i) if isinstance(i, (list, tuple)) else l + [i], lst, [])
 def print_results(strains_list, disp_list):
     # convert to numpy array
-    strain_arr = np.array([[vectorToNPArr(v) for v in strains]
-                           for strains in strains_list])
+    strain_arr = np.array([np.array(strains) for strains in strains_list])
     disp_arr = np.array(disp_list)
     np.save(data_path + "\\strain_list", strain_arr)
     np.save(data_path + "\\displacement_list", disp_arr)
 
+   
+nodes=list(femmesh.getElementNodes( femmesh.Faces[0]))
+print(strains)
+
+Gui.ActiveDocument.MyGMSHMeshObj.HighlightedNodes = nodes
 print_results(strains, list(displacements))
 # post processing of the result
 # femmesh_obj_gmsh.ViewObject.setNodeDisplacementByVectors(result_object.NodeNumbers, result_object.DisplacementVectors)

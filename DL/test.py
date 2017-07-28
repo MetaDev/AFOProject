@@ -3,16 +3,21 @@ from keras.layers import Dense, Activation
 from keras.wrappers.scikit_learn import KerasRegressor
 import numpy as np
 import sklearn.model_selection as ms
+from sklearn.preprocessing import normalize
+
 
 #read input
 data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
 x_file="\\strain_list.npy"
 y_file="\\displacement_list.npy"
+#TODO normalize input data
 X = np.load(data_path+x_file)
 Y = np.load(data_path+y_file)
 
 #flatten 3D strain vectors
 X=X.reshape(len(Y),-1)
+#normalize
+X=normalize(X,axis=1)
 
 def baseline_model():
 	# create model
