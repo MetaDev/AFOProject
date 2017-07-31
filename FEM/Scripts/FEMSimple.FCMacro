@@ -27,133 +27,132 @@ def clearAll():
     for obj in doc.Objects:
         doc.removeObject(obj.Label)
 
+def buildScene():
+    clearAll()
+    doc = App.ActiveDocument
 
 
-clearAll()
-doc = App.ActiveDocument
+    # some geometry
+    box = Part.makeBox(1, 1, 1)
+
+    box_obj = App.ActiveDocument.addObject('Part::Box', 'Box')
+    box_obj.Length = 4
+    box_obj.Height = 20
+
+    # change box and remesh, we do not need a new instance of gmsh_mesh class
+
+    # error = gmsh_mesh.create_mesh()
+    # print error
+
+    # App.ActiveDocument.recompute()
+    # change mesh params and remesh, we need a new instance of gmsh_mesh class
+    # femmesh_obj_gmsh.CharacteristicLengthMax = 1
+    # gmsh_mesh = FemGmshTools.FemGmshTools(femmesh_obj_gmsh)
+    # error = gmsh_mesh.create_mesh()
+    # print error
+    # App.ActiveDocument.recompute()
 
 
-# some geometry
-box = Part.makeBox(1, 1, 1)
-
-box_obj = App.ActiveDocument.addObject('Part::Box', 'Box')
-box_obj.Length = 4
-box_obj.Height = 20
-
-# change box and remesh, we do not need a new instance of gmsh_mesh class
-
-# error = gmsh_mesh.create_mesh()
-# print error
-
-# App.ActiveDocument.recompute()
-# change mesh params and remesh, we need a new instance of gmsh_mesh class
-# femmesh_obj_gmsh.CharacteristicLengthMax = 1
-# gmsh_mesh = FemGmshTools.FemGmshTools(femmesh_obj_gmsh)
-# error = gmsh_mesh.create_mesh()
-# print error
-# App.ActiveDocument.recompute()
+    # analysis
+    analysis_object = ObjectsFem.makeAnalysis("Analysis")
+    # solver
+    solver_object = ObjectsFem.makeSolverCalculix('CalculiX')
+    solver_object.AnalysisType = 'static'
+    solver_object.GeometricalNonlinearity = 'linear'
+    # solver_object.SteadyState = True
+    # solver_object.Accurency = 0.01
+    # solver_object.EigenmodeNumber = 1
+    solver_object.ThermoMechSteadyState = True
+    solver_object.MatrixSolverType = 'default'
+    solver_object.IterationsControlParameterTimeUse = False
+    doc.Analysis.Member = doc.Analysis.Member + [solver_object]
 
 
-# analysis
-analysis_object = ObjectsFem.makeAnalysis("Analysis")
-# solver
-solver_object = ObjectsFem.makeSolverCalculix('CalculiX')
-solver_object.AnalysisType = 'static'
-solver_object.GeometricalNonlinearity = 'linear'
-# solver_object.SteadyState = True
-# solver_object.Accurency = 0.01
-# solver_object.EigenmodeNumber = 1
-solver_object.ThermoMechSteadyState = True
-solver_object.MatrixSolverType = 'default'
-solver_object.IterationsControlParameterTimeUse = False
-doc.Analysis.Member = doc.Analysis.Member + [solver_object]
+    # fixed_constraint
+    fixed_constraint = doc.addObject("Fem::ConstraintFixed", "FemConstraintFixed")
+    fixed_constraint.References = [(doc.Box, "Face5s")]
+    doc.Analysis.Member = doc.Analysis.Member + [fixed_constraint]
 
 
-# fixed_constraint
-fixed_constraint = doc.addObject("Fem::ConstraintFixed", "FemConstraintFixed")
-fixed_constraint.References = [(doc.Box, "Face5s")]
-doc.Analysis.Member = doc.Analysis.Member + [fixed_constraint]
+    # import MechanicalMaterial
+    material_object = ObjectsFem.makeMaterialSolid("SolidMaterial")
+    mat = material_object.Material
+    mat['Name'] = "Steel-Generic"
+    mat['YoungsModulus'] = "210000 MPa"
+    mat['PoissonRatio'] = "0.30"
+    mat['Density'] = "7900 kg/m^3"
+    material_object.Material = mat
+    doc.Analysis.Member = doc.Analysis.Member + [material_object]
 
+    # make an initial FEM mesh
+    femmesh_obj_gmsh = ObjectsFem.makeMeshGmsh('MyGMSHMeshObj')
+    femmesh_obj_gmsh.Part = box_obj
+    App.ActiveDocument.recompute()
+    gmsh_mesh = FemGmshTools.FemGmshTools(femmesh_obj_gmsh)
+    error = gmsh_mesh.create_mesh()
+    print (error)
+    App.ActiveDocument.recompute()
 
-# import MechanicalMaterial
-material_object = ObjectsFem.makeMaterialSolid("SolidMaterial")
-mat = material_object.Material
-mat['Name'] = "Steel-Generic"
-mat['YoungsModulus'] = "210000 MPa"
-mat['PoissonRatio'] = "0.30"
-mat['Density'] = "7900 kg/m^3"
-material_object.Material = mat
-doc.Analysis.Member = doc.Analysis.Member + [material_object]
+    # mesh
+    doc.Analysis.Member = doc.Analysis.Member + [doc.MyGMSHMeshObj]
 
-# make an initial FEM mesh
-femmesh_obj_gmsh = ObjectsFem.makeMeshGmsh('MyGMSHMeshObj')
-femmesh_obj_gmsh.Part = box_obj
-App.ActiveDocument.recompute()
-gmsh_mesh = FemGmshTools.FemGmshTools(femmesh_obj_gmsh)
-error = gmsh_mesh.create_mesh()
-print (error)
-App.ActiveDocument.recompute()
-
-# mesh
-doc.Analysis.Member = doc.Analysis.Member + [doc.MyGMSHMeshObj]
-
-# recompute doc
-doc.recompute()
-
-FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
-
-fea = FemToolsCcx.FemToolsCcx()
-
-
-# displacement constraint setup
-displ_constraint = doc.addObject(
-    "Fem::ConstraintDisplacement", "FemConstraintDisplacement")
-displ_constraint.References = [(doc.Box, "Face6")]
-displ_constraint.xFree = False
-displ_constraint.yFree = False
-displ_constraint.zFree = False
-doc.Analysis.Member = doc.Analysis.Member + [displ_constraint]
-
-# number of sensors
-n_vec = 10
-femmesh=femmesh_obj_gmsh.FemMesh
-faceNodes = vc.getNodesFromFEMMeshSurface(femmesh, box_obj.Shape)
-print(faceNodes)
-# calculate random location of sensors, the same for every generated sample
-rand_node_i = np.random.choice(
-    range(len(faceNodes)), size=n_vec).astype(int)
-
-n_disp = 1
-disp_range = np.linspace(-0.2, 0.2, num=n_disp)
-
-displacements = list(itertools.combinations(disp_range, 1))
-mesh_normals = vc.getNormalOfNodes(rand_node_i,femmesh)
-rand_nodes = [faceNodes[i] for i in rand_node_i]
-
-strains =[]
-
-for disp in displacements:
-    displ_constraint.xDisplacement = 0
-    displ_constraint.yDisplacement = disp[0]
-    displ_constraint.zDisplacement = 0
-
-    fea.update_objects()
-    # a string is returned, the string should be empty
-    fea.check_prerequisites()
-    fea.reset_all()
-    fea.run()
-
-    fea.load_results()
-    result_object = App.ActiveDocument.getObject(
-        "CalculiX_static_results")
-
-# run the analysis
+    # recompute doc
+    doc.recompute()
+    return femmesh_obj_gmsh.FemMesh, box_obj.Shape
 
    
+
+def makeCalculations(femmesh, shape, n_sensors=10, n_disp=1):
+     # displacement constraint setup
+    displ_constraint = doc.addObject(
+        "Fem::ConstraintDisplacement", "FemConstraintDisplacement")
+    displ_constraint.References = [(doc.Box, "Face6")]
+    displ_constraint.xFree = False
+    displ_constraint.yFree = False
+    displ_constraint.zFree = False
+    doc.Analysis.Member = doc.Analysis.Member + [displ_constraint]
+    FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
+    fea = FemToolsCcx.FemToolsCcx()
+    # number of sensors
+
+    faceNodes = vc.getNodesFromFEMMeshSurface(femmesh, shape)
     
-    nodes_strains_1D =[vc.projectStrainVector3DOnMesh(result_object.StrainVectors[i],n)
-                             for i,n in zip(rand_nodes,mesh_normals)]
-    strains.append(nodes_strains_1D)
+    # calculate random location of sensors, the same for every generated sample
+    rand_node_i = np.random.choice(
+        range(len(faceNodes)), size=n_sensors).astype(int)
+
+   
+    disp_range = np.linspace(-0.2, 0.2, num=n_disp)
+
+    displacements = list(itertools.combinations(disp_range, 3))
+    mesh_normals = vc.getNormalOfNodes(rand_node_i,femmesh)
+    rand_nodes = [faceNodes[i] for i in rand_node_i]
+
+    strains =[]
+
+    for disp in displacements:
+        displ_constraint.xDisplacement = disp[0]
+        displ_constraint.yDisplacement = disp[1]
+        displ_constraint.zDisplacement = disp[2]
+
+        fea.update_objects()
+        # a string is returned, the string should be empty
+        fea.check_prerequisites()
+        fea.reset_all()
+        fea.run()
+
+        fea.load_results()
+        result_object = App.ActiveDocument.getObject(
+            "CalculiX_static_results")
+
+    # run the analysis
+
+    
+        
+        nodes_strains_1D =[vc.projectStrainVector3DOnMesh(result_object.StrainVectors[i],n)
+                                for i,n in zip(rand_nodes,mesh_normals)]
+        strains.append(nodes_strains_1D)
+    return list(displacements), strains
 
 
 def print_results(strains_list, disp_list):
@@ -162,13 +161,18 @@ def print_results(strains_list, disp_list):
     disp_arr = np.array(disp_list)
     np.save(data_path + "\\strain_list", strain_arr)
     np.save(data_path + "\\displacement_list", disp_arr)
-
-   
-
-print(strains)
-Gui.ActiveDocument.MyGMSHMeshObj.HighlightedNodes = list(faceNodes)
+    
+    
+femmesh, shape= buildScene()
+displacements, strains = makeCalculations(femmesh, shape, n_sensors=10, n_disp=20)
 print_results(strains, list(displacements))
+
 # post processing of the result
 # femmesh_obj_gmsh.ViewObject.setNodeDisplacementByVectors(result_object.NodeNumbers, result_object.DisplacementVectors)
-# femmesh_obj_gmsh.ViewObject.setNodeColorByScalars(result_object.NodeNumbers, result_object.StrainVectors)
+print(len(strains))
+App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(
+    App.ActiveDocument.MyGMSHMeshObj.FemMesh.Nodes, 
+                    App.ActiveDocument.getObject("CalculiX_static_results").StressVectors)
+# App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(rand_nodes, strains[0])
+Gui.ActiveDocument.MyGMSHMeshObj.HighlightedNodes = rand_nodes
 # femmesh_obj_gmsh.ViewObject.applyDisplacement(10)

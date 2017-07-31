@@ -3,6 +3,7 @@
 import numpy as np
 import utility as ut
 
+
 def getNodesFromFEMMeshSurface(femmesh, shape):
     return np.unique(ut.flatten( [(femmesh.getNodesByFace(f)) for f in shape.Faces ]))
 def vectorToNPArr(v):
@@ -13,23 +14,25 @@ def normalize(v):
     return v/np.linalg.norm(v)
 
 def getVectorToVectorRotation(a, b):
-    a=normalize(a)
-    b= normalize(b)
-    v = np.multiply(a,b)
-    s=np.linalg.norm(v)
+    a = normalize(a)
+    b = normalize(b)
+    v = np.multiply(a, b)
+    s = np.linalg.norm(v)
     #same vector
-    if(s<0.0001):
+    if(s < 0.0001):
         return np.eye(3)
-    c=np.dot(a,b)
+    c = np.dot(a, b)
     #opposite vector
-    if(np.abs(c+1)<0.0001):
-        R=np.eye(3)
-        R[2,2]=-1
+    if(np.abs(c + 1) < 0.0001):
+        R = np.eye(3)
+        R[2, 2] = -1
         return R
-    v_x=[[0,-v[2],v[1]],[v[2],0,-v[0]],[-v[1],v[0],0]]
-    return np.eye(3)+v_x+(np.array(v_x)**2)*(1/(1+c))
+    v_x = [[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]]
+    return np.eye(3) + v_x + (np.array(v_x)**2) * (1 / (1 + c))
 #assumes that the first 3 nodes in a FEMMesh element are the definingvertexes of the triangle or face
 #see: https://www.freecadweb.org/wiki/FEM_Mesh -> triangle element
+
+
 def getNPVertexFromFEMMeshface(femmesh, face_id):
     six_node_ids = femmesh.getElementNodes(face_id)
     return np.array([vectorToNPArr(femmesh.Nodes[six_node_ids[0]]),
@@ -66,7 +69,7 @@ def getNormalOfNodes(node_ids,femmesh):
 #convert to local coordinate system of the normal of the respective triangle 
 #project onto triangle plane
 #rotate randomly (save the rotation as sensor configuration) around origin
-def projectStrainVector3DOnMesh(strain_vec, tri_norm):
+def projectStrainVector3DOnMesh(strain_vec, tri_norm, triangle_center):
     #convert t`o local coordinate system by rotating (origin is the same, no translation)
     global_norm=np.array([0,0,1])
     R = getVectorToVectorRotation(global_norm,tri_norm)
@@ -86,3 +89,10 @@ def projectStrainVector3DOnMesh(strain_vec, tri_norm):
     
     #return the size of this vector
     return np.linalg.norm(proj_axis_strain)
+
+#not tested
+#draw debug line from two freecad vectors
+def debugLine(point1, point2):
+    l=Part.Line(point1, point2)
+    shape = l.toShape()
+    Part.show(shape)

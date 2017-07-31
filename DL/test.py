@@ -18,12 +18,12 @@ Y = np.load(data_path+y_file)
 X=X.reshape(len(Y),-1)
 #normalize
 X=normalize(X,axis=1)
-
+n_input = len(X[0])
 def baseline_model():
 	# create model
 	model = Sequential()
-	model.add(Dense(30, input_dim=30, kernel_initializer='normal', activation='relu'))
-	model.add(Dense(1, kernel_initializer='normal'))
+	model.add(Dense(n_input, input_dim=n_input, kernel_initializer='normal', activation='relu'))
+	model.add(Dense(3, kernel_initializer='normal'))
 	# Compile model
 	model.compile(loss='mean_squared_error', optimizer='adam')
 	return model
