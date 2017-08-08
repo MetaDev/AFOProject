@@ -98,11 +98,8 @@ def buildScene():
 
     # recompute doc
     doc.recompute()
-    return femmesh_obj_gmsh.FemMesh, box_obj.Shape
-
-   
-
-def makeCalculations(femmesh, shape, n_sensors=10, n_disp=1):
+    #set displacements
+    doc = App.ActiveDocument
      # displacement constraint setup
     displ_constraint = doc.addObject(
         "Fem::ConstraintDisplacement", "FemConstraintDisplacement")
@@ -111,6 +108,12 @@ def makeCalculations(femmesh, shape, n_sensors=10, n_disp=1):
     displ_constraint.yFree = False
     displ_constraint.zFree = False
     doc.Analysis.Member = doc.Analysis.Member + [displ_constraint]
+    return femmesh_obj_gmsh.FemMesh, box_obj.Shape,displ_constraint
+
+   
+
+def makeCalculations(femmesh, shape,displ_constraint, n_sensors=10, n_disp=1):
+    
     FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
     fea = FemToolsCcx.FemToolsCcx()
     # number of sensors
@@ -120,16 +123,16 @@ def makeCalculations(femmesh, shape, n_sensors=10, n_disp=1):
     # calculate random location of sensors, the same for every generated sample
     rand_node_i = np.random.choice(
         range(len(faceNodes)), size=n_sensors).astype(int)
-
-   
-    disp_range = np.linspace(-0.2, 0.2, num=n_disp)
-
-    displacements = list(itertools.combinations(disp_range, 3))
+    
+    
+    disp_range = np.linspace(-0.02, 0.02, num=max(n_disp,3))
+    
+    displacements = list(itertools.permutations(disp_range, 3))[:n_disp]
     mesh_normals = vc.getNormalOfNodes(rand_node_i,femmesh)
     rand_nodes = [faceNodes[i] for i in rand_node_i]
 
     strains =[]
-
+    
     for disp in displacements:
         displ_constraint.xDisplacement = disp[0]
         displ_constraint.yDisplacement = disp[1]
@@ -163,16 +166,27 @@ def print_results(strains_list, disp_list):
     np.save(data_path + "\\displacement_list", disp_arr)
     
     
-femmesh, shape= buildScene()
-displacements, strains = makeCalculations(femmesh, shape, n_sensors=10, n_disp=20)
+#femmesh, shape,displ_constraint= buildScene()
+#to be used on self built afo scene
+femmesh =  App.ActiveDocument.getObject(
+            "FEMMeshGMSH").FemMesh
+shape =  App.ActiveDocument.getObject(
+            "Fusion001").Shape
+displ_constraint = App.ActiveDocument.getObject(
+            "FemConstraintDisplacement")
+
+#for about a 1000 data points do 20 displacements
+n_disp=1
+displacements, strains = makeCalculations(femmesh, shape,displ_constraint, n_sensors=10, 
+n_disp=n_disp)
 print_results(strains, list(displacements))
 
 # post processing of the result
 # femmesh_obj_gmsh.ViewObject.setNodeDisplacementByVectors(result_object.NodeNumbers, result_object.DisplacementVectors)
-print(len(strains))
-App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(
-    App.ActiveDocument.MyGMSHMeshObj.FemMesh.Nodes, 
-                    App.ActiveDocument.getObject("CalculiX_static_results").StressVectors)
-# App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(rand_nodes, strains[0])
-Gui.ActiveDocument.MyGMSHMeshObj.HighlightedNodes = rand_nodes
+print(strains)
+# App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(
+#     femmesh.Nodes, 
+#                     App.ActiveDocument.getObject("CalculiX_static_results").StressVectors)
+# # App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(rand_nodes, strains[0])
+#Gui.ActiveDocument.MyGMSHMeshObj.HighlightedNodes = rand_nodes
 # femmesh_obj_gmsh.ViewObject.applyDisplacement(10)

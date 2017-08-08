@@ -69,7 +69,7 @@ def getNormalOfNodes(node_ids,femmesh):
 #convert to local coordinate system of the normal of the respective triangle 
 #project onto triangle plane
 #rotate randomly (save the rotation as sensor configuration) around origin
-def projectStrainVector3DOnMesh(strain_vec, tri_norm, triangle_center):
+def projectStrainVector3DOnMesh(strain_vec, tri_norm):
     #convert t`o local coordinate system by rotating (origin is the same, no translation)
     global_norm=np.array([0,0,1])
     R = getVectorToVectorRotation(global_norm,tri_norm)

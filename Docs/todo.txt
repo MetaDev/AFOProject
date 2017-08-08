@@ -1,4 +1,13 @@
+create workflow with preset scene
 
+
+port to ubuntu
+
+get back to this: https://forum.freecadweb.org/viewtopic.php?f=18&t=23569&sid=0e8271e70f076755753be2d7a429317f&start=10
+
+select displacement faces by offset
+
+allow simulated strain gauge to be over multiple triangles
 
 
 reintroduce random positions on the mesh with interpolation of strain vectors
@@ -31,6 +40,9 @@ add noise to femmesh and sensor data
 how to simulate stress applied by force from another object in freecad?
 ->create scene where one object displaces the other use contact constraints
 use a shell
+
+thread on creating two objects with a force
+
 
 add forces from opensim biomechanics
 
