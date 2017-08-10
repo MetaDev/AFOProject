@@ -5,6 +5,8 @@ import utility as ut
 
 
 def getNodesFromFEMMeshSurface(femmesh, shape):
+    #nodes with a face
+    
     return np.unique(ut.flatten( [(femmesh.getNodesByFace(f)) for f in shape.Faces ]))
 def vectorToNPArr(v):
     return np.array([v.x, v.y, v.z])
@@ -16,6 +18,7 @@ def normalize(v):
 def getVectorToVectorRotation(a, b):
     a = normalize(a)
     b = normalize(b)
+  
     v = np.multiply(a, b)
     s = np.linalg.norm(v)
     #same vector
@@ -31,31 +34,29 @@ def getVectorToVectorRotation(a, b):
     return np.eye(3) + v_x + (np.array(v_x)**2) * (1 / (1 + c))
 #assumes that the first 3 nodes in a FEMMesh element are the definingvertexes of the triangle or face
 #see: https://www.freecadweb.org/wiki/FEM_Mesh -> triangle element
-
-
 def getNPVertexFromFEMMeshface(femmesh, face_id):
     six_node_ids = femmesh.getElementNodes(face_id)
     return np.array([vectorToNPArr(femmesh.Nodes[six_node_ids[0]]),
                     vectorToNPArr(femmesh.Nodes[six_node_ids[1]]),
                     vectorToNPArr(femmesh.Nodes[six_node_ids[2]])])
-def getFaceFromNode(node_id, femmesh):
-    for face in femmesh.Faces:
-        if (node_id in femmesh.getElementNodes(face)):
-            return face
+def getNodesFromFemMeshWithFace(femmesh):
+    return np.unique([[id for id in femmesh.getElementNodes(f)] for f in femmesh.Faces])
 #expects 3 vertexes in numpy format
 #Calculate the normal for all the triangles, by taking the cross product of the vectors v1-v0, and v2-v0 in each triangle    
 def getNormalOfTriangle(vertexes):
     return normalize(np.cross(vertexes[1]-vertexes[0],vertexes[2]-vertexes[0]))
-def getNormalOfNodes(node_ids,femmesh):
+def getNormalOfFemmeshTriangles(femmesh):
+    
+    node_ids = getNodesFromFemMeshWithFace(femmesh)
+    print(len(node_ids))
     #get all faces of a node
     nodeTriangles={id: [] for id in node_ids}
     triangleNormal = {}
     for face in femmesh.Faces:
         triangleNormal[face]=getNormalOfTriangle(getNPVertexFromFEMMeshface(femmesh, face))
-
-        for id in node_ids:
-            if (id in femmesh.getElementNodes(face)):
-                nodeTriangles[id].append(face)
+        
+        for id in femmesh.getElementNodes(face):
+            nodeTriangles[id].append(face)
     
     #calculate average normal of each node
     return [np.average(np.array([triangleNormal[triangle_id] 
@@ -70,7 +71,7 @@ def getNormalOfNodes(node_ids,femmesh):
 #project onto triangle plane
 #rotate randomly (save the rotation as sensor configuration) around origin
 def projectStrainVector3DOnMesh(strain_vec, tri_norm):
-    #convert t`o local coordinate system by rotating (origin is the same, no translation)
+    #convert to local coordinate system by rotating (origin is the same, no translation)
     global_norm=np.array([0,0,1])
     R = getVectorToVectorRotation(global_norm,tri_norm)
 

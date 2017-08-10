@@ -12,6 +12,7 @@ import itertools
 import utility
 
 import vector_calc as vc
+reload(vc)
 
 
 data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
@@ -112,26 +113,23 @@ def buildScene():
 
    
 
-def makeCalculations(femmesh, shape,displ_constraint, n_sensors=10, n_disp=1):
+def makeCalculations(femmesh, shape,displ_constraint, n_sensors=10, n_strains=1):
     
     FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
     fea = FemToolsCcx.FemToolsCcx()
     # number of sensors
 
     faceNodes = vc.getNodesFromFEMMeshSurface(femmesh, shape)
-    
+    allNodes = vc.getNodesFromFemMeshWithFace(femmesh)
     # calculate random location of sensors, the same for every generated sample
-    rand_node_i = np.random.choice(
-        range(len(faceNodes)), size=n_sensors).astype(int)
+   
     
+    displacements = np.random.uniform(-0.02,0.02,size=(n_strains,3))
+    mesh_normals = vc.getNormalOfFemmeshTriangles(femmesh)
     
-    disp_range = np.linspace(-0.02, 0.02, num=max(n_disp,3))
-    
-    displacements = list(itertools.permutations(disp_range, 3))[:n_disp]
-    mesh_normals = vc.getNormalOfNodes(rand_node_i,femmesh)
-    rand_nodes = [faceNodes[i] for i in rand_node_i]
-
-    strains =[]
+    surface_strains=[]
+    surface_proj_strains =[]
+    all_strains = []
     
     for disp in displacements:
         displ_constraint.xDisplacement = disp[0]
@@ -148,42 +146,50 @@ def makeCalculations(femmesh, shape,displ_constraint, n_sensors=10, n_disp=1):
         result_object = App.ActiveDocument.getObject(
             "CalculiX_static_results")
 
-    # run the analysis
-
-    
-        
+        # run the analysis
+        #all strains
+        all_strains.append([vc.vectorToNPArr(v) for v in result_object.StrainVectors])
+        #strains on surface
+        surface_strains.append([result_object.StrainVectors[i] for i in faceNodes])
+        #strains on surface projected on random (1D) axis
         nodes_strains_1D =[vc.projectStrainVector3DOnMesh(result_object.StrainVectors[i],n)
-                                for i,n in zip(rand_nodes,mesh_normals)]
-        strains.append(nodes_strains_1D)
-    return list(displacements), strains
+                                for i,n in zip(allNodes,mesh_normals)]
+        surface_proj_strains.append(nodes_strains_1D)
+    return list(displacements), all_strains,surface_strains,surface_proj_strains
 
 
-def print_results(strains_list, disp_list):
+def print_results( all_strains,surface_strains,surface_proj_strains, disp_list):
     # convert to numpy array
-    strain_arr = np.array([np.array(strains) for strains in strains_list])
+    all_strains_arr = np.array([np.array(strains) for strains in all_strains])
+    surface_strains_arr = np.array([np.array(strains) for strains in surface_strains])
+    surface_proj_strains_arr = np.array([np.array(strains) for strains in surface_proj_strains])
     disp_arr = np.array(disp_list)
-    np.save(data_path + "\\strain_list", strain_arr)
+    np.save(data_path + "\\all_strain_list", all_strains_arr)
+    np.save(data_path + "\\surface_strain_list", surface_strains_arr)
+    np.save(data_path + "\\1D_strain_list", surface_proj_strains_arr)
     np.save(data_path + "\\displacement_list", disp_arr)
     
     
 #femmesh, shape,displ_constraint= buildScene()
 #to be used on self built afo scene
 femmesh =  App.ActiveDocument.getObject(
-            "FEMMeshGMSH").FemMesh
+            "FEMMeshGMSH001").FemMesh
 shape =  App.ActiveDocument.getObject(
-            "Fusion001").Shape
+            "Fusion001001").Shape
 displ_constraint = App.ActiveDocument.getObject(
             "FemConstraintDisplacement")
 
-#for about a 1000 data points do 20 displacements
-n_disp=1
-displacements, strains = makeCalculations(femmesh, shape,displ_constraint, n_sensors=10, 
-n_disp=n_disp)
-print_results(strains, list(displacements))
+#for about a 1000 data points do 10 displacements
+n_strains=1000
+n_sensors=10
 
-# post processing of the result
-# femmesh_obj_gmsh.ViewObject.setNodeDisplacementByVectors(result_object.NodeNumbers, result_object.DisplacementVectors)
-print(strains)
+displacements, all_strains,surface_strains,surface_proj_strains = makeCalculations(femmesh, shape,displ_constraint, n_sensors=n_sensors, 
+n_strains=n_strains)
+print_results(all_strains,surface_strains,surface_proj_strains, (displacements))
+print(all_strains)
+# # post processing of the result
+# # femmesh_obj_gmsh.ViewObject.setNodeDisplacementByVectors(result_object.NodeNumbers, result_object.DisplacementVectors)
+# print(strains)
 # App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(
 #     femmesh.Nodes, 
 #                     App.ActiveDocument.getObject("CalculiX_static_results").StressVectors)
