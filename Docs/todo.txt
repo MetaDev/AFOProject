@@ -1,11 +1,14 @@
-debug strain projection
-
+make presentation with graphs and screenshots
 create graphs for different number of sensors
+integrate new strain projection in freecad code and generate new data
+
+
+
 
 find out how to rename components in freecad, the name of the label cannot be used after change in the code App.Activedocument
 
 create scene with cylinder
-
+and create data
 
 find out how to use rotations
 

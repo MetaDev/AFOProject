@@ -7,7 +7,8 @@ import numpy as np
 import sklearn.model_selection as ms
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import scale 
-
+from sklearn.preprocessing import normalize
+import vector_calc as vc
 
 #read input
 data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
@@ -22,19 +23,30 @@ y_file="\\displacement_list"
 
 X = np.load(data_path+x_file+".npy")
 Y = np.load(data_path+y_file+".npy")
-n_sensors=1
+n_sensors=10
 
-[ [j[[0,2][c]] for c,j in  enumerate(i)] for i in [[[1,8,9],[5,7,3]],[[1,8,9],[5,7,3]]]]
+
+
+#https://stackoverflow.com/questions/33658620/generating-two-orthogonal-vectors-that-are-orthogonal-to-a-particular-direction
+def rand_triangle_coord_system(tri_n):
+	#random coordinate system, with z axis as normal of triangle
+	x = np.random.randn(3)  # take a random vector
+	x -= x.dot(tri_n) * tri_n       # make it orthogonal to 
+	x /= np.linalg.norm(x)  # normalize it
+	y = np.cross(tri_n, x)
+	return np.array([x,y,tri_n])
+#https://stackoverflow.com/questions/21125987/how-do-i-convert-a-coordinate-in-one-3d-cartesian-coordinate-system-to-another-3
+def project_3Dstrain_on_rand_1D_in_triangle(X,n_sensors):
+	rand_CS = [rand_triangle_coord_system(normalize(np.random.rand(1,3))[0]) for i in range(n_sensors)]
+	return np.array( [[np.dot(rand_CS[i],v) for i,v in enumerate(v_row)] for v_row in X ])
 
 def preprocessing_data(X,Y,n_sensors):
 	print("n_sensors: "+ str(n_sensors))
 	#extract n_sensor columns
 	X=np.delete(X, tuple(range(len(X[0])-n_sensors)), axis=1)
 
-	#flatten 3D strain vectors (for each sensor)
-	#test, extract single axis from strain 3D vectors
-	random_axis = [np.random.randint(0,2) for i in range(n_sensors)]
-	X=np.array([[j[random_axis[c]] for c,j in  enumerate(i)] for i in X])
+	#project 3D strain on random
+	X=project_3Dstrain_on_rand_1D_in_triangle(X, n_sensors)
 
 	#flatten X
 	X=X.reshape(len(Y),-1)
@@ -52,18 +64,22 @@ def build_model(X):
 	model.add(Dense(32))
 	model.add(Activation('tanh'))
 	model.add(Dropout(0.5))
+	model.add(Dense(32))
+	model.add(Activation('tanh'))
+	model.add(Dropout(0.5))
 	model.add(Dense(3, kernel_initializer='normal'))
 	adam=keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 	keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.02, patience=10, verbose=0, mode='auto')
 	# Compile model
-	model.compile(loss='mean_squared_error', optimizer=adam, metrics=['accuracy'])
+	model.compile(loss='mse', optimizer=adam, metrics=['mse','accuracy'])
 	return model
 
 # fix random seed for reproducibility
 seed = 7
 
 X,Y = preprocessing_data(X,Y,n_sensors)
-# evaluate model with standardized dataset
+
+# # evaluate model with standardized dataset
 model = build_model(X)
 
 kfold = ms.KFold(n_splits=5, random_state=seed)
@@ -75,24 +91,25 @@ for train, test in kfold.split(X, Y):
 	# evaluate the model
 	scores = model.evaluate(X[test], Y[test], verbose=0)
 	print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+
 	cvscores.append(scores[1] * 100)
 print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
-# summarize history for accuracy
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.show()
-# summarize history for loss
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.show()
+# # summarize history for accuracy
+# plt.plot(history.history['acc'])
+# plt.plot(history.history['val_acc'])
+# plt.title('model accuracy')
+# plt.ylabel('accuracy')
+# plt.xlabel('epoch')
+# plt.legend(['train', 'test'], loc='upper left')
+# plt.show()
+# # summarize history for loss
+# plt.plot(history.history['loss'])
+# plt.plot(history.history['val_loss'])
+# plt.title('model loss')
+# plt.ylabel('loss')
+# plt.xlabel('epoch')
+# plt.legend(['train', 'test'], loc='upper left')
+# plt.show()
 
 

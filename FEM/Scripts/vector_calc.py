@@ -64,32 +64,25 @@ def getNormalOfFemmeshTriangles(femmesh):
                         for node_id in node_ids]
 
 
+#https://stackoverflow.com/questions/33658620/generating-two-orthogonal-vectors-that-are-orthogonal-to-a-particular-direction
+def rand_triangle_coord_system(tri_n):
+	#random coordinate system, with z axis as normal of triangle
+	x = np.random.randn(3)  # take a random vector
+	x -= x.dot(tri_n) * tri_n       # make it orthogonal to 
+	x /= np.linalg.norm(x)  # normalize it
+	y = np.cross(tri_n, x)
+	return np.array([x,y,tri_n])
+#https://stackoverflow.com/questions/21125987/how-do-i-convert-a-coordinate-in-one-3d-cartesian-coordinate-system-to-another-3
+def project_3Dstrain_on_rand_1D_in_triangle(X,n_sensors):
+	rand_CS = [rand_triangle_coord_system(normalize(np.random.rand(1,3))[0]) for i in range(n_sensors)]
+	return np.array( [[np.dot(rand_CS,v) for i,v in enumerate(v_row)] for v_row in X ])
 
 #warning this method works only for strain vectors with smooth adjacent triangels
 #strains are vectors according to the global coordinate system
-#convert to local coordinate system of the normal of the respective triangle 
-#project onto triangle plane
-#rotate randomly (save the rotation as sensor configuration) around origin
-def projectStrainVector3DOnMesh(strain_vec, tri_norm):
-    #convert to local coordinate system by rotating (origin is the same, no translation)
-    global_norm=np.array([0,0,1])
-    R = getVectorToVectorRotation(global_norm,tri_norm)
-
-    strain_vec = vectorToNPArr(strain_vec)
-    
-    #Ra=b, rotate 
-    strain_vec_tri = np.dot(R,strain_vec)
-    #project on triangle plane, our coordinate axis this plane
-    proj_plane_strain=strain_vec_tri*np.array([1,1,0])
-    #project on random axis of the triangle plane (x,y plane) do to coordinate system
-    rand_theta = np.random.random()*2*np.pi
-    rand_axis=np.array([np.cos(rand_theta),np.sin(rand_theta),0])
-    
-    #rand axis is a unit vector, thus the dot product isn't divided by it's length
-    proj_axis_strain=rand_axis*(np.dot(proj_plane_strain,rand_axis))
-    
-    #return the size of this vector
-    return np.linalg.norm(proj_axis_strain)
+#given dict of strains per node and normal of node
+#totest TODO
+def projectStrainVector3DOnMesh(strain_vecs, coord_syst_node):
+    return np.array( [np.dot(coord_syst_node[i],v) for i,v in enumerate(strain_vecs)] )
 
 #not tested
 #draw debug line from two freecad vectors
