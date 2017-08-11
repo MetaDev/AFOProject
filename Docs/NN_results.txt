@@ -1,0 +1,168 @@
+n_sensors: 1
+(1000, 978, 3)
+(1000, 1, 3)
+mean_squared_error: 67.33%
+mean_squared_error: 70.89%
+mean_squared_error: 70.92%
+mean_squared_error: 70.29%
+mean_squared_error: 64.69%
+mse
+68.82% (+/- 2.45%)
+accuracy
+55.40% (+/- 3.97%)
+n_sensors: 2
+(1000, 978, 3)
+(1000, 2, 3)
+mean_squared_error: 39.29%
+mean_squared_error: 37.81%
+mean_squared_error: 39.64%
+mean_squared_error: 36.23%
+mean_squared_error: 33.55%
+mse
+37.30% (+/- 2.23%)
+accuracy
+59.80% (+/- 2.44%)
+n_sensors: 3
+(1000, 978, 3)
+(1000, 3, 3)
+mean_squared_error: 40.73%
+mean_squared_error: 34.85%
+mean_squared_error: 37.00%
+mean_squared_error: 13.62%
+mean_squared_error: 5.67%
+mse
+26.37% (+/- 14.02%)
+accuracy
+70.00% (+/- 14.38%)
+n_sensors: 4
+(1000, 978, 3)
+(1000, 4, 3)
+mean_squared_error: 8.51%
+mean_squared_error: 7.22%
+mean_squared_error: 6.99%
+mean_squared_error: 5.58%
+mean_squared_error: 5.41%
+mse
+6.74% (+/- 1.14%)
+accuracy
+87.60% (+/- 4.61%)
+n_sensors: 5
+(1000, 978, 3)
+(1000, 5, 3)
+mean_squared_error: 38.27%
+mean_squared_error: 40.19%
+mean_squared_error: 37.24%
+mean_squared_error: 34.07%
+mean_squared_error: 32.73%
+mse
+36.50% (+/- 2.74%)
+accuracy
+60.80% (+/- 3.19%)
+n_sensors: 6
+(1000, 978, 3)
+(1000, 6, 3)
+mean_squared_error: 5.98%
+mean_squared_error: 9.86%
+mean_squared_error: 7.78%
+mean_squared_error: 5.95%
+mean_squared_error: 6.74%
+mse
+7.26% (+/- 1.46%)
+accuracy
+86.80% (+/- 3.03%)
+n_sensors: 7
+(1000, 978, 3)
+(1000, 7, 3)
+mean_squared_error: 8.56%
+mean_squared_error: 5.39%
+mean_squared_error: 7.64%
+mean_squared_error: 7.03%
+mean_squared_error: 4.76%
+mse
+6.67% (+/- 1.41%)
+accuracy
+88.40% (+/- 3.56%)
+n_sensors: 8
+(1000, 978, 3)
+(1000, 8, 3)
+mean_squared_error: 4.33%
+mean_squared_error: 7.89%
+mean_squared_error: 6.17%
+mean_squared_error: 4.18%
+mean_squared_error: 7.19%
+mse
+5.95% (+/- 1.49%)
+accuracy
+88.70% (+/- 2.58%)
+n_sensors: 9
+(1000, 978, 3)
+(1000, 9, 3)
+mean_squared_error: 5.72%
+mean_squared_error: 6.02%
+mean_squared_error: 5.72%
+mean_squared_error: 6.34%
+mean_squared_error: 4.43%
+mse
+5.65% (+/- 0.65%)
+accuracy
+88.70% (+/- 3.26%)
+n_sensors: 10
+(1000, 978, 3)
+(1000, 10, 3)
+mean_squared_error: 5.34%
+mean_squared_error: 8.12%
+mean_squared_error: 8.58%
+mean_squared_error: 7.18%
+mean_squared_error: 11.86%
+mse
+8.22% (+/- 2.13%)
+accuracy
+86.30% (+/- 2.96%)
+n_sensors: 11
+(1000, 978, 3)
+(1000, 11, 3)
+mean_squared_error: 4.74%
+mean_squared_error: 8.10%
+mean_squared_error: 9.97%
+mean_squared_error: 5.78%
+mean_squared_error: 6.20%
+mse
+6.96% (+/- 1.86%)
+accuracy
+88.50% (+/- 5.05%)
+n_sensors: 12
+(1000, 978, 3)
+(1000, 12, 3)
+mean_squared_error: 9.89%
+mean_squared_error: 7.20%
+mean_squared_error: 7.70%
+mean_squared_error: 4.45%
+mean_squared_error: 5.82%
+mse
+7.01% (+/- 1.83%)
+accuracy
+88.30% (+/- 5.78%)
+n_sensors: 13
+(1000, 978, 3)
+(1000, 13, 3)
+mean_squared_error: 6.28%
+mean_squared_error: 9.27%
+mean_squared_error: 8.30%
+mean_squared_error: 9.05%
+mean_squared_error: 8.78%
+mse
+8.34% (+/- 1.08%)
+accuracy
+83.00% (+/- 2.02%)
+n_sensors: 14
+(1000, 978, 3)
+(1000, 14, 3)
+mean_squared_error: 8.72%
+mean_squared_error: 6.67%
+mean_squared_error: 8.37%
+mean_squared_error: 7.23%
+mean_squared_error: 13.11%
+mse
+8.82% (+/- 2.27%)
+accuracy
+84.30% (+/- 2.01%)

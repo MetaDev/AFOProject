@@ -45,10 +45,9 @@ def getNodesFromFemMeshWithFace(femmesh):
 #Calculate the normal for all the triangles, by taking the cross product of the vectors v1-v0, and v2-v0 in each triangle    
 def getNormalOfTriangle(vertexes):
     return normalize(np.cross(vertexes[1]-vertexes[0],vertexes[2]-vertexes[0]))
-def getNormalOfFemmeshTriangles(femmesh):
+def getNormalOfFemmeshSurface(femmesh):
     
     node_ids = getNodesFromFemMeshWithFace(femmesh)
-    print(len(node_ids))
     #get all faces of a node
     nodeTriangles={id: [] for id in node_ids}
     triangleNormal = {}
@@ -73,16 +72,12 @@ def rand_triangle_coord_system(tri_n):
 	y = np.cross(tri_n, x)
 	return np.array([x,y,tri_n])
 #https://stackoverflow.com/questions/21125987/how-do-i-convert-a-coordinate-in-one-3d-cartesian-coordinate-system-to-another-3
-def project_3Dstrain_on_rand_1D_in_triangle(X,n_sensors):
-	rand_CS = [rand_triangle_coord_system(normalize(np.random.rand(1,3))[0]) for i in range(n_sensors)]
-	return np.array( [[np.dot(rand_CS,v) for i,v in enumerate(v_row)] for v_row in X ])
-
-#warning this method works only for strain vectors with smooth adjacent triangels
+#warning this method only make sense for strain vectors with smooth adjacent triangels
 #strains are vectors according to the global coordinate system
-#given dict of strains per node and normal of node
-#totest TODO
-def projectStrainVector3DOnMesh(strain_vecs, coord_syst_node):
-    return np.array( [np.dot(coord_syst_node[i],v) for i,v in enumerate(strain_vecs)] )
+#apply coordinate system of each triangle in the surface to its respective strain 
+# When training on realistic data the x should be extracted the x value from the random axis
+def project_3Dstrains_on_mesh_surface(surface_strain_vectors,surface_CSs):
+    return np.array( [np.dot(CS,v) for v,CS in zip(surface_strain_vectors,surface_CSs)])
 
 #not tested
 #draw debug line from two freecad vectors

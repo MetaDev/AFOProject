@@ -1,17 +1,10 @@
-make presentation with graphs and screenshots
-create graphs for different number of sensors
-integrate new strain projection in freecad code and generate new data
-
-
-
+in data prepocessing, select random n_sensor vectors instead of first n
 
 find out how to rename components in freecad, the name of the label cannot be used after change in the code App.Activedocument
 
-create scene with cylinder
-and create data
-
 find out how to use rotations
 
+find how to run freecad in background https://www.freecadweb.org/wiki/Start_up_and_Configuration
 
 port to ubuntu
 

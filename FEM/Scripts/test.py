@@ -12,41 +12,25 @@ import vector_calc as vc
 
 #read input
 data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
-data_type=1
+data_type=2
 if data_type==0:
 	x_file="\\all_strain_list"
 elif data_type==1:
 	x_file="\\surface_strain_list"
 else:
-	x_file="\\1D_strain_list"
+	x_file="\\proj_surface_strain_list"
 y_file="\\displacement_list"
 
 X = np.load(data_path+x_file+".npy")
 Y = np.load(data_path+y_file+".npy")
-n_sensors=10
-
-
-
-#https://stackoverflow.com/questions/33658620/generating-two-orthogonal-vectors-that-are-orthogonal-to-a-particular-direction
-def rand_triangle_coord_system(tri_n):
-	#random coordinate system, with z axis as normal of triangle
-	x = np.random.randn(3)  # take a random vector
-	x -= x.dot(tri_n) * tri_n       # make it orthogonal to 
-	x /= np.linalg.norm(x)  # normalize it
-	y = np.cross(tri_n, x)
-	return np.array([x,y,tri_n])
-#https://stackoverflow.com/questions/21125987/how-do-i-convert-a-coordinate-in-one-3d-cartesian-coordinate-system-to-another-3
-def project_3Dstrain_on_rand_1D_in_triangle(X,n_sensors):
-	rand_CS = [rand_triangle_coord_system(normalize(np.random.rand(1,3))[0]) for i in range(n_sensors)]
-	return np.array( [[np.dot(rand_CS[i],v) for i,v in enumerate(v_row)] for v_row in X ])
 
 def preprocessing_data(X,Y,n_sensors):
 	print("n_sensors: "+ str(n_sensors))
+	#TODO extract random sensor not just the first 
 	#extract n_sensor columns
 	X=np.delete(X, tuple(range(len(X[0])-n_sensors)), axis=1)
-
-	#project 3D strain on random
-	X=project_3Dstrain_on_rand_1D_in_triangle(X, n_sensors)
+#extract x axis value
+	X=X[:,:,[0]]
 
 	#flatten X
 	X=X.reshape(len(Y),-1)
@@ -74,26 +58,30 @@ def build_model(X):
 	model.compile(loss='mse', optimizer=adam, metrics=['mse','accuracy'])
 	return model
 
-# fix random seed for reproducibility
-seed = 7
-
-X,Y = preprocessing_data(X,Y,n_sensors)
-
-# # evaluate model with standardized dataset
-model = build_model(X)
-
-kfold = ms.KFold(n_splits=5, random_state=seed)
-cvscores = []
-for train, test in kfold.split(X, Y):
-	# Fit the model
-	history = model.fit(X[train], Y[train],validation_split=0.1, epochs=10, 
-										batch_size=5, verbose=1)
-	# evaluate the model
-	scores = model.evaluate(X[test], Y[test], verbose=0)
-	print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
-
-	cvscores.append(scores[1] * 100)
-print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
+for n_sensors in range(1,15):
+	
+	X_pre,Y_pre = preprocessing_data(X,Y,n_sensors)
+	
+	model = build_model(X_pre)
+	# fix random seed for reproducibility
+	seed = 7
+	kfold = ms.KFold(n_splits=5, random_state=seed)
+	cvscores_mse = []
+	cvscores_val_acc = []
+	for train, test in kfold.split(X_pre, Y_pre):
+		# Fit the model
+		history = model.fit(X_pre[train], Y_pre[train],validation_split=0.1, epochs=10, 
+											batch_size=5, verbose=0)
+		# evaluate the model
+		scores = model.evaluate(X_pre[test], Y_pre[test], verbose=0)
+		#print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+		cvscores_val_acc.append(scores[2] * 100)
+		cvscores_mse.append(scores[1] * 100)
+	# print("mse")
+	# print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores_mse), np.std(cvscores_mse)))
+	# print("accuracy")
+	# print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores_val_acc), np.std(cvscores_val_acc)))
+	print(np.mean(cvscores_val_acc))
 
 # # summarize history for accuracy
 # plt.plot(history.history['acc'])
