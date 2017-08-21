@@ -166,10 +166,11 @@ def print_results( all_strains,surface_strains,surface_proj_strains, disp_list):
     surface_strains_arr = np.array([np.array(strains) for strains in surface_strains])
     surface_proj_strains_arr = np.array([np.array(strains) for strains in surface_proj_strains])
     disp_arr = np.array(disp_list)
-    np.save(data_path + "\\all_strain_list", all_strains_arr)
-    np.save(data_path + "\\surface_strain_list", surface_strains_arr)
-    np.save(data_path + "\\proj_surface_strain_list", surface_proj_strains_arr)
-    np.save(data_path + "\\displacement_list", disp_arr)
+    
+    np.save(data_path + "\\all_strain_list"+"_simple_afo_"+str(simple_afo), all_strains_arr)
+    np.save(data_path + "\\surface_strain_list"+"_simple_afo_"+str(simple_afo), surface_strains_arr)
+    np.save(data_path + "\\proj_surface_strain_list"+"_simple_afo_"+str(simple_afo), surface_proj_strains_arr)
+    np.save(data_path + "\\displacement_list"+"_simple_afo_"+str(simple_afo), disp_arr)
     
     
 #femmesh, shape,displ_constraint= buildScene()
@@ -190,7 +191,7 @@ else:
                 "FemConstraintDisplacement")
     
 #the number of displacements thus number of points generated
-n_disp=1000
+n_disp=1
 n_sensors=10
 
 displacements, all_strains,surface_strains,surface_proj_strains = runFEA(femmesh, shape,displ_constraint, n_sensors=n_sensors, 
@@ -204,5 +205,5 @@ print(surface_proj_strains)
 #     femmesh.Nodes, 
 #                     App.ActiveDocument.getObject("CalculiX_static_results").StressVectors)
 # # App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(rand_nodes, strains[0])
-#Gui.ActiveDocument.MyGMSHMeshObj.HighlightedNodes = rand_nodes
+App.ActiveDocument.getObject("FEMMeshGMSH001").HighlightedNodes = list(range(20))
 # femmesh_obj_gmsh.ViewObject.applyDisplacement(10)

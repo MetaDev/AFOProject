@@ -1,17 +1,19 @@
-in data prepocessing, select random n_sensor vectors instead of first n
+optimize data sampling for min distance between vector points
+->requires position of points in data and maybe even poisson sampling http://www.alecjacobson.com/weblog/?p=4111
 
-find out how to rename components in freecad, the name of the label cannot be used after change in the code App.Activedocument
+try importing new AFO's, this requires the newest version of SW to export to an opensource format (stp)
+
+find out why prediction on ellips doesn't work
 
 find out how to use rotations
 
 find how to run freecad in background https://www.freecadweb.org/wiki/Start_up_and_Configuration
 
-port to ubuntu
+port to ubuntu (freecad plus tensorflow)
 
+What to do with the fact that all strain info is in the fixed nodes, their position is not uniformly random
+but any value not on the nodes would be an interpolation between nodes, the amount of information does not change
 allow simulated strain gauge to be over multiple triangles
-
-reintroduce random positions on the mesh with interpolation of strain vectors
-
 
 
 #data realism
