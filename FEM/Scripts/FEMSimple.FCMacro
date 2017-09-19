@@ -16,26 +16,26 @@ reload(vc)
 
 
 data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
-#to run script open FreeCAD
-#create empty project and use buildScene()
-#or open selfmadeAFO.FCStd\cylinderAFO.FCStd and set the analysis to active
-simple_afo=True
-#and enter in ptyhonconsole following command:
-#execfile("C:\Users\Administrator\Google Drive\Windows\Research\Project\FEM\Scripts\FEMSimple.FCMacro")
+# to run script open FreeCAD
+# create empty project and use buildScene()
+# or open selfmadeAFO.FCStd\cylinderAFO.FCStd and set the analysis to active
+
+# and enter in ptyhonconsole following command:
+# execfile("C:\Users\Administrator\Google Drive\Windows\Research\Project\FEM\Scripts\FEMSimple.FCMacro")
 
 
 def clearAll():
-    if App.ActiveDocument==None:
+    if App.ActiveDocument == None:
         App.newDocument("Test")
         App.setActiveDocument("Test")
     doc = App.ActiveDocument
     for obj in doc.Objects:
         doc.removeObject(obj.Label)
 
+
 def buildScene():
     clearAll()
     doc = App.ActiveDocument
-
 
     # some geometry
     box = Part.makeBox(1, 1, 1)
@@ -57,7 +57,6 @@ def buildScene():
     # print error
     # App.ActiveDocument.recompute()
 
-
     # analysis
     analysis_object = ObjectsFem.makeAnalysis("Analysis")
     # solver
@@ -72,12 +71,11 @@ def buildScene():
     solver_object.IterationsControlParameterTimeUse = False
     doc.Analysis.Member = doc.Analysis.Member + [solver_object]
 
-
     # fixed_constraint
-    fixed_constraint = doc.addObject("Fem::ConstraintFixed", "FemConstraintFixed")
+    fixed_constraint = doc.addObject(
+        "Fem::ConstraintFixed", "FemConstraintFixed")
     fixed_constraint.References = [(doc.Box, "Face5s")]
     doc.Analysis.Member = doc.Analysis.Member + [fixed_constraint]
-
 
     # import MechanicalMaterial
     material_object = ObjectsFem.makeMaterialSolid("SolidMaterial")
@@ -95,7 +93,7 @@ def buildScene():
     App.ActiveDocument.recompute()
     gmsh_mesh = FemGmshTools.FemGmshTools(femmesh_obj_gmsh)
     error = gmsh_mesh.create_mesh()
-    print (error)
+    print(error)
     App.ActiveDocument.recompute()
 
     # mesh
@@ -103,9 +101,9 @@ def buildScene():
 
     # recompute doc
     doc.recompute()
-    #set displacements
+    # set displacements
     doc = App.ActiveDocument
-     # displacement constraint setup
+    # displacement constraint setup
     displ_constraint = doc.addObject(
         "Fem::ConstraintDisplacement", "FemConstraintDisplacement")
     displ_constraint.References = [(doc.Box, "Face6")]
@@ -113,33 +111,32 @@ def buildScene():
     displ_constraint.yFree = False
     displ_constraint.zFree = False
     doc.Analysis.Member = doc.Analysis.Member + [displ_constraint]
-    return femmesh_obj_gmsh.FemMesh, box_obj.Shape,displ_constraint
+    return femmesh_obj_gmsh.FemMesh, box_obj.Shape, displ_constraint
 
-   
 
-def runFEA(femmesh, shape,displ_constraint, n_sensors=10, n_disp=1):
-    
-    #FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
+def runFEA(femmesh, shape, displ_constraint,result_object_name, n_sensors=10, n_disp=1):
+
+    # FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
     fea = FemToolsCcx.FemToolsCcx()
     # number of sensors
 
     faceNodes = vc.getNodesFromFEMMeshSurface(femmesh, shape)
     allNodes = vc.getNodesFromFemMeshWithFace(femmesh)
     # calculate random location of sensors, the same for every generated sample
-   
-    
-    displacements = np.random.uniform(-0.02,0.02,size=(n_disp,3))
+    # displacment is in cm
+    displacements = np.random.uniform(-4, 2, size=(n_disp, 2))
     surface_normals = vc.getNormalOfFemmeshSurface(femmesh)
-    #calculate 
-    mesh_normal_CS = [vc.rand_triangle_coord_system(n) for n in surface_normals]
-    surface_strains=[]
-    surface_proj_strains=[]
+    # calculate
+    mesh_normal_CS = [vc.rand_triangle_coord_system(
+        n) for n in surface_normals]
+    surface_strains = []
+    surface_proj_strains = []
     all_strains = []
-    
+
     for disp in displacements:
         displ_constraint.xDisplacement = disp[0]
         displ_constraint.yDisplacement = disp[1]
-        displ_constraint.zDisplacement = disp[2]
+        displ_constraint.zDisplacement = 0
 
         fea.update_objects()
         # a string is returned, the string should be empty
@@ -148,62 +145,87 @@ def runFEA(femmesh, shape,displ_constraint, n_sensors=10, n_disp=1):
         fea.run()
 
         fea.load_results()
-        result_object = App.ActiveDocument.getObject(
-            "CalculiX_static_results")
+        result_object =  App.ActiveDocument.getObject(result_object_name)
 
         # run the analysis
-        #all strains
-        all_strains.append([vc.vectorToNPArr(v) for v in result_object.StrainVectors])
-        #strains on surface
-        surface_strain=[result_object.StrainVectors[i] for i in faceNodes]
-        surface_proj_strains.append(vc.project_3Dstrains_on_mesh_surface(surface_strain,mesh_normal_CS))
+        # all strains
+        all_strains.append([vc.vectorToNPArr(v)
+                            for v in result_object.StrainVectors])
+        # strains on surface
+        surface_strain = [result_object.StrainVectors[i] for i in faceNodes]
+        surface_proj_strains.append(
+            vc.project_3Dstrains_on_mesh_surface(surface_strain, mesh_normal_CS))
         surface_strains.append(surface_strain)
-    return list(displacements), all_strains,surface_strains,surface_proj_strains
+    return list(displacements), all_strains, surface_strains, surface_proj_strains
 
-def print_results( all_strains,surface_strains,surface_proj_strains, disp_list):
+
+def print_results(all_strains, surface_strains, surface_proj_strains, disp_list):
     # convert to numpy array
     all_strains_arr = np.array([np.array(strains) for strains in all_strains])
-    surface_strains_arr = np.array([np.array(strains) for strains in surface_strains])
-    surface_proj_strains_arr = np.array([np.array(strains) for strains in surface_proj_strains])
+    surface_strains_arr = np.array(
+        [np.array(strains) for strains in surface_strains])
+    surface_proj_strains_arr = np.array(
+        [np.array(strains) for strains in surface_proj_strains])
     disp_arr = np.array(disp_list)
-    
-    np.save(data_path + "\\all_strain_list"+"_simple_afo_"+str(simple_afo), all_strains_arr)
-    np.save(data_path + "\\surface_strain_list"+"_simple_afo_"+str(simple_afo), surface_strains_arr)
-    np.save(data_path + "\\proj_surface_strain_list"+"_simple_afo_"+str(simple_afo), surface_proj_strains_arr)
-    np.save(data_path + "\\displacement_list"+"_simple_afo_"+str(simple_afo), disp_arr)
-    
-    
+
+    np.save(data_path + "\\all_strain_list" +
+            "_" + scene_name, all_strains_arr)
+    np.save(data_path + "\\surface_strain_list" +
+            "_" + scene_name, surface_strains_arr)
+    np.save(data_path + "\\proj_surface_strain_list" +
+            "_" + scene_name, surface_proj_strains_arr)
+    np.save(data_path + "\\displacement_list" +
+            "_" + scene_name, disp_arr)
+
+
 #femmesh, shape,displ_constraint= buildScene()
-#to be used on self built afo scene
-
-if simple_afo:
-    femmesh =  App.ActiveDocument.getObject(
-                "FEMMeshGMSH001").FemMesh
-    shape =  App.ActiveDocument.getObject(
-                "Fusion001001").Shape
+# to be used on self built afo scene
+scene_name="cylinder"
+if scene_name=="simple_afo":
+    femmesh = App.ActiveDocument.getObject(
+        "FEMMeshGMSH001").FemMesh
+    shape = App.ActiveDocument.getObject(
+        "Fusion001001").Shape
     displ_constraint = App.ActiveDocument.getObject(
-                "FemConstraintDisplacement")
-#cylinder project
-else:
-    femmesh =  App.ActiveDocument.FEMMeshGMSH.FemMesh
-    shape =  App.ActiveDocument.Cut001.Shape
+        "FemConstraintDisplacement")
+# cylinder project
+elif scene_name=="cylinder":
+    femmesh = App.ActiveDocument.FEMMeshGMSH.FemMesh
+    shape = App.ActiveDocument.Cylinder.Shape
+    result_object_name = "CalculiX_static_results"
     displ_constraint = App.ActiveDocument.getObject(
-                "FemConstraintDisplacement")
-    
-#the number of displacements thus number of points generated
-n_disp=1
-n_sensors=10
+        "FemConstraintDisplacement")
+elif scene_name=="simple_afo_big":
+    femmesh = App.ActiveDocument.FEMMeshGMSH.FemMesh
+    shape = App.ActiveDocument.Scale.Shape
+    result_object_name = "CalculiX_static_results"
+    displ_constraint = App.ActiveDocument.getObject(
+        "FemConstraintDisplacement")
+elif scene_name=="cube":
+    femmesh = App.ActiveDocument.getObject(
+        "FEMMeshGMSH001").FemMesh
+    shape = App.ActiveDocument.Box.Shape
+    result_object_name = "CalculiX_static_results001"
+    displ_constraint = App.ActiveDocument.getObject(
+        "FemConstraintDisplacement001")
 
-displacements, all_strains,surface_strains,surface_proj_strains = runFEA(femmesh, shape,displ_constraint, n_sensors=n_sensors, 
-                                                                                                n_disp=n_disp)
-print_results(all_strains,surface_strains,surface_proj_strains, (displacements))
-print(surface_proj_strains)
+# the number of displacements thus number of points generated
+n_disp = 100
+n_sensors = 10
+
+displacements, all_strains, surface_strains, surface_proj_strains = runFEA(femmesh, shape, displ_constraint, result_object_name, n_sensors=n_sensors,
+                                                                           n_disp=n_disp)
+print_results(all_strains, surface_strains,
+              surface_proj_strains, (displacements))
+
+
 # # post processing of the result
 # # femmesh_obj_gmsh.ViewObject.setNodeDisplacementByVectors(result_object.NodeNumbers, result_object.DisplacementVectors)
 # print(strains)
 # App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(
-#     femmesh.Nodes, 
+#     femmesh.Nodes,
 #                     App.ActiveDocument.getObject("CalculiX_static_results").StressVectors)
 # # App.ActiveDocument.MyGMSHMeshObj.ViewObject.setNodeColorByScalars(rand_nodes, strains[0])
-App.ActiveDocument.getObject("FEMMeshGMSH001").HighlightedNodes = list(range(20))
+# App.ActiveDocument.getObject(
+#     "FEMMeshGMSH001").HighlightedNodes = list(range(20))
 # femmesh_obj_gmsh.ViewObject.applyDisplacement(10)

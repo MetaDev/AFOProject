@@ -1,43 +1,8 @@
-optimize data sampling for min distance between vector points
-->requires position of points in data and maybe even poisson sampling http://www.alecjacobson.com/weblog/?p=4111
-
-try importing new AFO's, this requires the newest version of SW to export to an opensource format (stp)
-
-find out why prediction on ellips doesn't work
-
-find out how to use rotations
-
-find how to run freecad in background https://www.freecadweb.org/wiki/Start_up_and_Configuration
 
 port to ubuntu (freecad plus tensorflow)
 
-What to do with the fact that all strain info is in the fixed nodes, their position is not uniformly random
-but any value not on the nodes would be an interpolation between nodes, the amount of information does not change
-allow simulated strain gauge to be over multiple triangles
-
-
-#data realism
-
-extend displacment with 3D rotations
-
-
-# train on data from many different sensor positions-> test by choosing random sensors and check whether data is retrieved
--> not necessary because a machine will be used to set certain displacement and generate realistic data from the unknown placed sensors
-
-
-user proper mesh (simplified) for afo -> cannot build femmesh from this errors in opensim
-
-add noise to femmesh and sensor data
-
-forces in different directions instead of displacements
-Use the Draft WB to draw a line. This line can then be used as a direction vector.
-
-how to simulate stress applied by force from another object in freecad?
-->create scene where one object displaces the other use contact constraints
-use a shell
-->contact constraint in fem workbench
-
-add forces from opensim biomechanics
+to reconstruct missing sensor values use a pretrained variational auto-encoder with a deep probabilistic neural network
+for implementation see: https://github.com/blei-lab/edward/blob/master/examples/vae.py
 
 
 
