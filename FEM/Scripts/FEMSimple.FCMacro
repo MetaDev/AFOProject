@@ -180,7 +180,7 @@ def print_results(all_strains, surface_strains, surface_proj_strains, disp_list)
 
 #femmesh, shape,displ_constraint= buildScene()
 # to be used on self built afo scene
-scene_name="cylinder"
+scene_name="simple_afo_big"
 if scene_name=="simple_afo":
     femmesh = App.ActiveDocument.getObject(
         "FEMMeshGMSH001").FemMesh
