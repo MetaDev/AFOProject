@@ -18,7 +18,7 @@ result_path = r'C:\Users\Administrator\Google Drive\Windows\Research\Project\Doc
 data_type = 2
 n_sensor_axis = 1
 axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
-name_afo_project = "_simple_afo_big"
+name_afo_project = "_cylinder"
 if data_type == 0:
     x_file = "\\all_strain_list_simple" + name_afo_project
 elif data_type == 1:
@@ -158,6 +158,7 @@ plt.colorbar() # draw colorbar
 # plot data points.
 # plt.scatter(test_mean[:,0],test_mean[:,1],marker='o',c='b',s=5)
 plt.savefig("heatmap_degree_error.png")
+
 plt.show()
 
 # save results in excel

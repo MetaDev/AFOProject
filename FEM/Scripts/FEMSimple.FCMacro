@@ -114,7 +114,8 @@ def buildScene():
     return femmesh_obj_gmsh.FemMesh, box_obj.Shape, displ_constraint
 
 
-def runFEA(femmesh, shape, displ_constraint,result_object_name, n_sensors=10, n_disp=1):
+def runFEA(femmesh, shape, displ_constraint,result_object_name, 
+n_sensors=10, n_disp=1, disp=(-0.1,0.1)):
 
     # FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
     fea = FemToolsCcx.FemToolsCcx()
@@ -124,7 +125,7 @@ def runFEA(femmesh, shape, displ_constraint,result_object_name, n_sensors=10, n_
     allNodes = vc.getNodesFromFemMeshWithFace(femmesh)
     # calculate random location of sensors, the same for every generated sample
     # displacment is in cm
-    displacements = np.random.uniform(-4, 2, size=(n_disp, 2))
+    displacements = np.random.uniform(disp[0], disp[1], size=(n_disp, 2))
     surface_normals = vc.getNormalOfFemmeshSurface(femmesh)
     # calculate
     mesh_normal_CS = [vc.rand_triangle_coord_system(
@@ -180,7 +181,7 @@ def print_results(all_strains, surface_strains, surface_proj_strains, disp_list)
 
 #femmesh, shape,displ_constraint= buildScene()
 # to be used on self built afo scene
-scene_name="simple_afo_big"
+scene_name="cylinder"
 if scene_name=="simple_afo":
     femmesh = App.ActiveDocument.getObject(
         "FEMMeshGMSH001").FemMesh
@@ -195,12 +196,14 @@ elif scene_name=="cylinder":
     result_object_name = "CalculiX_static_results"
     displ_constraint = App.ActiveDocument.getObject(
         "FemConstraintDisplacement")
+    disp=(-0.16,0.16)
 elif scene_name=="simple_afo_big":
     femmesh = App.ActiveDocument.FEMMeshGMSH.FemMesh
     shape = App.ActiveDocument.Scale.Shape
     result_object_name = "CalculiX_static_results"
     displ_constraint = App.ActiveDocument.getObject(
         "FemConstraintDisplacement")
+    disp=(-4,2)
 elif scene_name=="cube":
     femmesh = App.ActiveDocument.getObject(
         "FEMMeshGMSH001").FemMesh
@@ -214,7 +217,7 @@ n_disp = 100
 n_sensors = 10
 
 displacements, all_strains, surface_strains, surface_proj_strains = runFEA(femmesh, shape, displ_constraint, result_object_name, n_sensors=n_sensors,
-                                                                           n_disp=n_disp)
+                                                                           n_disp=n_disp,disp=disp)
 print_results(all_strains, surface_strains,
               surface_proj_strains, (displacements))
 
