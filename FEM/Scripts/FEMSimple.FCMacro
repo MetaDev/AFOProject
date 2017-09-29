@@ -114,15 +114,14 @@ def buildScene():
     return femmesh_obj_gmsh.FemMesh, box_obj.Shape, displ_constraint
 
 
-def runFEA(femmesh, shape, displ_constraint,result_object_name, 
-n_sensors=10, n_disp=1, disp=(-0.1,0.1)):
+def runFEA(femmesh, shape, displ_constraint,result_object_name, n_disp=1, disp=(-0.1,0.1)):
 
     # FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
     fea = FemToolsCcx.FemToolsCcx()
     # number of sensors
 
     faceNodes = vc.getNodesFromFEMMeshSurface(femmesh, shape)
-    allNodes = vc.getNodesFromFemMeshWithFace(femmesh)
+    faceNodesCoord = [vc.vectorToNPArr(femmesh.getNodeById(i)) for i in faceNodes]
     # calculate random location of sensors, the same for every generated sample
     # displacment is in cm
     displacements = np.random.uniform(disp[0], disp[1], size=(n_disp, 2))
@@ -157,10 +156,10 @@ n_sensors=10, n_disp=1, disp=(-0.1,0.1)):
         surface_proj_strains.append(
             vc.project_3Dstrains_on_mesh_surface(surface_strain, mesh_normal_CS))
         surface_strains.append(surface_strain)
-    return list(displacements), all_strains, surface_strains, surface_proj_strains
+    return list(displacements),faceNodesCoord, all_strains, surface_strains, surface_proj_strains
 
 
-def print_results(all_strains, surface_strains, surface_proj_strains, disp_list):
+def print_results(all_strains, surface_strains, surface_proj_strains, disp_list, disp_coord):
     # convert to numpy array
     all_strains_arr = np.array([np.array(strains) for strains in all_strains])
     surface_strains_arr = np.array(
@@ -171,12 +170,15 @@ def print_results(all_strains, surface_strains, surface_proj_strains, disp_list)
 
     np.save(data_path + "\\all_strain_list" +
             "_" + scene_name, all_strains_arr)
+
     np.save(data_path + "\\surface_strain_list" +
             "_" + scene_name, surface_strains_arr)
     np.save(data_path + "\\proj_surface_strain_list" +
             "_" + scene_name, surface_proj_strains_arr)
     np.save(data_path + "\\displacement_list" +
             "_" + scene_name, disp_arr)
+    np.save(data_path + "\\displacement_coord" +
+            "_" + scene_name, np.array(disp_coord))
 
 
 #femmesh, shape,displ_constraint= buildScene()
@@ -223,12 +225,11 @@ elif scene_name=="rot_cube":
 
 # the number of displacements thus number of points generated
 n_disp = 100
-n_sensors = 10
 
-displacements, all_strains, surface_strains, surface_proj_strains = runFEA(femmesh, shape, displ_constraint, result_object_name, n_sensors=n_sensors,
+displacements, disp_coord, all_strains, surface_strains, surface_proj_strains = runFEA(femmesh, shape, displ_constraint, result_object_name,
                                                                            n_disp=n_disp,disp=disp)
 print_results(all_strains, surface_strains,
-              surface_proj_strains, (displacements))
+              surface_proj_strains, displacements, disp_coord)
 
 
 # # post processing of the result

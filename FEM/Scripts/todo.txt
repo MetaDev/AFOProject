@@ -1,0 +1,3 @@
+interpolate strain values with a UV map function
+
+find relevance of sensor thourgh feature relevance analysis: https://www.analyticsvidhya.com/blog/2016/12/introduction-to-feature-selection-methods-with-an-example-or-how-to-select-the-right-variables/

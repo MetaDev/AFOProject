@@ -6,6 +6,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel as C
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from sklearn.preprocessing import StandardScaler, normalize
+import scipy
 
 from sklearn import linear_model
 import vector_calc as vc
@@ -16,9 +17,10 @@ result_path = r'C:\Users\Administrator\Google Drive\Windows\Research\Project\Doc
 data_type = 2
 n_sensor_axis = 1
 axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
-name_afo_project = "_cylinder"
+# name_afo_project = "_cylinder"
+name_afo_project = "_rot_cube"
 # name_afo_project = "_simple_afo_big"
-#the length from the deformed object is used to calculate the angle based on displacement
+#the length (in dm) from the deformed object is used to calculate the angle based on displacement
 length=0.1
 if data_type == 0:
     x_file = "\\all_strain_list_simple" + name_afo_project
@@ -26,10 +28,22 @@ elif data_type == 1:
     x_file = "\\surface_strain_list" + name_afo_project
 else:
     x_file = "\\proj_surface_strain_list" + name_afo_project
-y_file = "\\displacement_list"+ name_afo_project
+disp_vectors = "\\displacement_list"+ name_afo_project
+#in mm
+disp_coord = "\\displacement_coord"+ name_afo_project
 
 X = np.load(data_path + x_file + ".npy")
-Y = np.load(data_path + y_file + ".npy")
+Y = np.load(data_path + disp_vectors + ".npy")
+Y_coord = np.load(data_path + disp_coord + ".npy")
+#two options to interpolate 1, weighted sum of X closest points, interpolate function over all values with barycentric coordinates
+# Y_func_1 =  lambda x, y : x + y
+#2
+#the ranges to train the model on: x=0||2 , y=[0,5], z= [0,10]
+
+#a different function for each displacement
+Y_funcs=[ scipy.interpolate.LinearNDInterpolator(points=Y_coord,values=X[i]) for i in range(len(X))]
+
+print(Y_funcs[0](0,2,3))
 # for i in range(3):
 #     plt.hist(X[:,0,i], bins='auto')  # arguments are passed to np.histogram
 #     plt.show()
