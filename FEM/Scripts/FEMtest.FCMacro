@@ -1,9 +1,0 @@
-import FemGui
-FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
-import FemToolsCcx
-fea = FemToolsCcx.FemToolsCcx()
-fea.update_objects()
-fea.check_prerequisites() # a string is returned, the string should be empty
-fea.reset_all()
-fea.run()
-fea.load_results()

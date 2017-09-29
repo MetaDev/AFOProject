@@ -181,7 +181,7 @@ def print_results(all_strains, surface_strains, surface_proj_strains, disp_list)
 
 #femmesh, shape,displ_constraint= buildScene()
 # to be used on self built afo scene
-scene_name="cylinder"
+scene_name="rot_cube"
 if scene_name=="simple_afo":
     femmesh = App.ActiveDocument.getObject(
         "FEMMeshGMSH001").FemMesh
@@ -211,6 +211,15 @@ elif scene_name=="cube":
     result_object_name = "CalculiX_static_results001"
     displ_constraint = App.ActiveDocument.getObject(
         "FemConstraintDisplacement001")
+elif scene_name=="rot_cube":
+    femmesh = App.ActiveDocument.getObject(
+        "FEMMeshGMSH").FemMesh
+    shape = App.ActiveDocument.Box.Shape
+    result_object_name = "CalculiX_static_results"
+    displ_constraint = App.ActiveDocument.getObject(
+        "FemConstraintDisplacement")
+    disp=(-0.3,0.3)
+
 
 # the number of displacements thus number of points generated
 n_disp = 100

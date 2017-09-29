@@ -14,11 +14,12 @@ import vector_calc as vc
 data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
 result_path = r'C:\Users\Administrator\Google Drive\Windows\Research\Project\Docs\simple_AFO_results.xlsx'
 data_type = 2
-n_sensor_axis = 3
+n_sensor_axis = 1
 axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
 name_afo_project = "_cylinder"
 # name_afo_project = "_simple_afo_big"
-
+#the length from the deformed object is used to calculate the angle based on displacement
+length=0.1
 if data_type == 0:
     x_file = "\\all_strain_list_simple" + name_afo_project
 elif data_type == 1:
@@ -50,7 +51,7 @@ def preprocessing_data(X, Y, n_sensors):
     X=X+noise
     Y = scalerY.fit_transform(Y)
     return X, Y
-def evaluate_by_example(X_pre, Y,model):
+def evaluate_by_example(X_pre, Y,model, length):
     # #pick strain values from X, with a label from -40 to 20
     # to_pred_points = np.linspace(-4,2,7)
 
@@ -62,10 +63,11 @@ def evaluate_by_example(X_pre, Y,model):
     #denormalise data
     pred_test_Y=scalerY.inverse_transform(pred_test_Y)
     test_Y=np.array([id[1] for id in test_data_indexed])
+    
     #calculate the error given predicted data
-    degree_error= [(calc_angle_degree(pr_y,0.1)-calc_angle_degree((t_y),0.1)) for pr_y,t_y in zip(pred_test_Y,test_Y)]
+    degree_error= [(calc_angle_degree(pr_y,length)-calc_angle_degree((t_y),length)) for pr_y,t_y in zip(pred_test_Y,test_Y)]
     #return list of avtual deformation angle in degrees and it's corresponding error
-    return list(zip([calc_angle_degree((t_y),0.1) for t_y in test_Y],[e for e in degree_error]))
+    return list(zip([calc_angle_degree((t_y),length) for t_y in test_Y],[e for e in degree_error]))
 
     # in my test setup the displacement is in dm and length in mm, thus I have to convert the length to dm by dividing by 100
 def calc_angle_degree(displacement,length):
@@ -86,7 +88,7 @@ gp = GaussianProcessRegressor(kernel=kernel,alpha=0, n_restarts_optimizer=9)
 n_trials = 1
 cv_results = []
 degree_test= []
-for i, n_s in enumerate(range(100, 101)):
+for i, n_s in enumerate(range(10, 11)):
     # for evaluation of a model accuracy the sensor layout should be kept constant over trials 
     # X_pre, Y_pre = preprocessing_data(X, Y, n_s)
 
@@ -114,7 +116,7 @@ for i, n_s in enumerate(range(100, 101)):
         cv_score_mse.append([np.mean(mse),np.std(mse)])
         
     #calc mean and std from degree test
-    degree_test.append(evaluate_by_example(X_pre, Y,model))
+    degree_test.append(evaluate_by_example(X_pre, Y,model,length))
     cv_results.append([n_s, np.mean(np.array(cv_score_mse)[:,0]),
     np.mean(np.array(cv_score_mse)[:,1])])
 print(cv_results)
@@ -128,14 +130,12 @@ A =np.stack((
 from scipy.interpolate import griddata
 # grid the data.
 # define grid.
-xi = np.linspace(-45,25,100)
-yi = np.linspace(-45,25,100)
+xi = np.linspace(-60,60,100)
+yi = np.linspace(-60,60,100)
 zi = griddata(( test_mean[:,0],  test_mean[:,1]), test_mean[:,2]+test_mean[:,3],(xi[None,:], yi[:,None]), method='cubic')
 # contour the gridded data, plotting dots at the randomly spaced data points.
 CS = plt.contour(xi,yi,zi,15,linewidths=0.5,colors='k')
 CS = plt.contourf(xi,yi,zi,15,cmap=plt.cm.jet)
 plt.colorbar() # draw colorbar
-# plot data points.
-# plt.scatter(test_mean[:,0],test_mean[:,1],marker='o',c='b',s=5)
-# plt.savefig("heatmap_degree_error.png")
+#plt.savefig(r"C:\Users\Administrator\Google Drive\Windows\Research\Project\FEM\Results\learning\visual\heatmap_error_rectangular.png")
 plt.show()
