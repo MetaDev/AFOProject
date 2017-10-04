@@ -1,12 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn.model_selection as ms
-import xlwings as xw
+import scipy
+
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel as C
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from sklearn.preprocessing import StandardScaler, normalize
-import scipy
+
 
 from sklearn import linear_model
 import vector_calc as vc
@@ -18,8 +19,8 @@ data_type = 2
 n_sensor_axis = 1
 axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
 # name_afo_project = "_cylinder"
-name_afo_project = "_rot_cube"
-# name_afo_project = "_simple_afo_big"
+# name_afo_project = "_rot_cube"
+name_afo_project = "_simple_afo"
 #the length (in dm) from the deformed object is used to calculate the angle based on displacement
 length=0.1
 if data_type == 0:
@@ -30,18 +31,79 @@ else:
     x_file = "\\proj_surface_strain_list" + name_afo_project
 disp_vectors = "\\displacement_list"+ name_afo_project
 #in mm
-disp_coord = "\\displacement_coord"+ name_afo_project
-
+disp_coord = "\\node_coord"+ name_afo_project
+faces_nodes = "\\faces_nodes"+ name_afo_project
 X = np.load(data_path + x_file + ".npy")
 Y = np.load(data_path + disp_vectors + ".npy")
-Y_coord = np.load(data_path + disp_coord + ".npy")
+
+nodes_i_coord = dict([tuple([tup4[0],tup4[1:4]]) for tup4 in np.load(data_path + disp_coord + ".npy")])
+
+mesh_triangles_nodes = np.load(data_path + faces_nodes + ".npy")
+
+#data structure with indexed node strains for each displacement
+disp_node_i_strains=[[disp,dict([ (node_i, strain) for node_i, strain in zip(nodes_i_coord.keys(), strains)])]
+                                for disp, strains in zip(Y,X)] 
+
+#this data strucutre contains all the data strucutered in a mesh of triangles-> disp, mesh_triangles_by_coord_and_strain
+#I only use the first 3 nodes of a triangle definition, these contain the corners, the other three are midpoints
+#the 3 additional points are used for higher order interpolation
+disp_triangles_coord_strain=[]
+for disp_i_strains in disp_node_i_strains:
+    disp=disp_i_strains[0]
+    i_strains= disp_i_strains[1]
+    triangles=[]
+    for triangle_nodes in mesh_triangles_nodes:
+        triangles.append(
+            [[nodes_i_coord[node_i],i_strains[node_i]] for node_i in triangle_nodes[0:3]]
+        )
+    disp_triangles_coord_strain.append([disp,triangles])
+
+
+disp__triangles__coord_strain = np.array([
+    [disp_i_strains[0],
+        [
+            [   
+                [nodes_i_coord[node_i] for node_i in triangle_nodes[0:3]]
+            ,
+                [disp_i_strains[1][node_i] for node_i in triangle_nodes[0:3]]
+            ]
+            for triangle_nodes in mesh_triangles_nodes 
+        ]
+    ]
+    for disp_i_strains in disp_node_i_strains
+]) 
+print("test")
+print(len(disp_triangles__coord_strain[0][1][0][0]))
 #two options to interpolate 1, weighted sum of X closest points, interpolate function over all values with barycentric coordinates
 # Y_func_1 =  lambda x, y : x + y
 #2
-#the ranges to train the model on: x=0||2 , y=[0,5], z= [0,10]
 
+def calc_uv(p,triangle):
+
+    f1=triangle[0]-p
+    f2=triangle[1]-p
+    f3=triangle[2]-p
+    #change triangles
+    a=np.linalg.norm(np.cross(triangle[0]-triangle[1],triangle[0]-triangle[2]))
+    a1=np.linalg.norm(np.cross(f2,f3))/a
+    a2=np.linalg.norm(np.cross(f3,f1))/a
+    a3=np.linalg.norm(np.cross(f1,f2))/a
+    return [a1,a2,a3]
+def calc_strain_on_point_in_mesh(point,triangles_coord_strain):
+    #if any of the areas in calc_uv is outside of [0,1], the point is outside the triangle
+    for triangle_c_s in triangles_coord_strain:
+        uv=calc_uv(point,triangle_c_s[0])
+        if all([0<=uv_<=1 for uv_ in uv]):
+            return [triangle_c_s[1][0]*uv[0],triangle_c_s[1][1]*uv[1],triangle_c_s[1][2]*uv[2]]
+
+
+    #return some error if the point is not on the mesh
+#the ranges to train the model on for small simple afo: x=0||2 , y=[0,5], z= [0,10]
+calc_strain_on_point_in_mesh([0,2,2],disp__triangles__coord_strain[0][1])
+#this function can be used to test interpolation as alternative to neural net
+#encode a few points in the interpolation and estimate the rest
 #a different function for each displacement
-Y_funcs=[ scipy.interpolate.LinearNDInterpolator(points=Y_coord,values=X[i]) for i in range(len(X))]
+# Y_funcs=[ scipy.interpolate.LinearNDInterpolator(point s=Y_coord,values=X[i]) for i in range(len(X))]
 
 print(Y_funcs[0](0,2,3))
 # for i in range(3):
@@ -49,10 +111,13 @@ print(Y_funcs[0](0,2,3))
 #     plt.show()
 scalerX = StandardScaler()
 scalerY = StandardScaler()
-def preprocessing_data(X, Y, n_sensors):
+def preprocessing_data(X, Y, n_sensors,sensor_positions=None):
     # extract random n_sensor columns
-    X = np.delete(X, (tuple(np.random.choice(len(X[0]), len(X[0]) - n_sensors, replace=False))), axis=1)
-    
+    if not sensor_position:
+        X = np.delete(X, (tuple(np.random.choice(len(X[0]), len(X[0]) - n_sensors, replace=False))), axis=1)
+    else:
+        #calculate interpolated strain value at each point
+        X = np.array([[calc_strain_on_point_in_mesh(pos,disp__t__c_s[1]) for pos in sensor_positions] for disp__t__c_s in disp__triangles__coord_strain])
     # extract x axis value
     X = X[:, :, axis_training[n_sensor_axis]]
     

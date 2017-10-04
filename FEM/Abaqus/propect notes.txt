@@ -1,0 +1,18 @@
+Abaqus project notes
+
+lookup simulation on a stent
+
+first crimping with other object (contact)
+than recoil -> hyperelastic
+than expansion in the vessel simulate the vessel
+
+first draw stent
+
+mesh sensitivity analysis
+
+add nodes to more curved parts
+
+hyperelastic material, expansion with recoil ( find parameters in literature)
+
+first compare three materials 
+than play with parameters
