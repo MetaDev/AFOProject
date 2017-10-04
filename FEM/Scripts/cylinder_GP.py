@@ -72,8 +72,7 @@ disp__triangles__coord_strain = np.array([
     ]
     for disp_i_strains in disp_node_i_strains
 ]) 
-print("test")
-print(len(disp_triangles__coord_strain[0][1][0][0]))
+
 #two options to interpolate 1, weighted sum of X closest points, interpolate function over all values with barycentric coordinates
 # Y_func_1 =  lambda x, y : x + y
 #2
@@ -94,9 +93,9 @@ def calc_strain_on_point_in_mesh(point,triangles_coord_strain):
     for triangle_c_s in triangles_coord_strain:
         uv=calc_uv(point,triangle_c_s[0])
         if all([0<=uv_<=1 for uv_ in uv]):
-            return [triangle_c_s[1][0]*uv[0],triangle_c_s[1][1]*uv[1],triangle_c_s[1][2]*uv[2]]
+            return triangle_c_s[1][0]*uv[0] + triangle_c_s[1][1]*uv[1] + triangle_c_s[1][2]*uv[2]
 
-
+    print("point not located on the mesh")
     #return some error if the point is not on the mesh
 #the ranges to train the model on for small simple afo: x=0||2 , y=[0,5], z= [0,10]
 calc_strain_on_point_in_mesh([0,2,2],disp__triangles__coord_strain[0][1])
@@ -104,8 +103,8 @@ calc_strain_on_point_in_mesh([0,2,2],disp__triangles__coord_strain[0][1])
 #encode a few points in the interpolation and estimate the rest
 #a different function for each displacement
 # Y_funcs=[ scipy.interpolate.LinearNDInterpolator(point s=Y_coord,values=X[i]) for i in range(len(X))]
+# print(Y_funcs[0](0,2,3))
 
-print(Y_funcs[0](0,2,3))
 # for i in range(3):
 #     plt.hist(X[:,0,i], bins='auto')  # arguments are passed to np.histogram
 #     plt.show()
@@ -113,17 +112,18 @@ scalerX = StandardScaler()
 scalerY = StandardScaler()
 def preprocessing_data(X, Y, n_sensors,sensor_positions=None):
     # extract random n_sensor columns
-    if not sensor_position:
+    if not sensor_positions:
         X = np.delete(X, (tuple(np.random.choice(len(X[0]), len(X[0]) - n_sensors, replace=False))), axis=1)
     else:
         #calculate interpolated strain value at each point
-        X = np.array([[calc_strain_on_point_in_mesh(pos,disp__t__c_s[1]) for pos in sensor_positions] for disp__t__c_s in disp__triangles__coord_strain])
+        X = np.array([[calc_strain_on_point_in_mesh(pos,disp__t__c_s[1]) 
+                                        for pos in sensor_positions] 
+                                             for disp__t__c_s in disp__triangles__coord_strain])
+                                                                            
     # extract x axis value
     X = X[:, :, axis_training[n_sensor_axis]]
-    
     # flatten X
     X = X.reshape(len(Y), -1)
-    
     # scale to mean 0 and unit variance
     X = scalerX.fit_transform(X)
     noise=np.random.normal(0,0.1,np.shape(X))
@@ -168,13 +168,17 @@ n_trials = 1
 cv_results = []
 degree_test= []
 for i, n_s in enumerate(range(10, 11)):
+    #the ranges to train the model on for small simple afo: x=0||2 , y=[0,5], z= [0,10]
+    import itertools
+    sens_pos=[[i,j,k] for (i,j,k) in itertools.product([0,2],np.linspace(0,5,2),np.linspace(0,10,3))]
+
     # for evaluation of a model accuracy the sensor layout should be kept constant over trials 
     # X_pre, Y_pre = preprocessing_data(X, Y, n_s)
 
     mse=[]
     for n in range(n_trials):
         #pick a different layout for each trial for angle evaluation
-        X_pre, Y_pre = preprocessing_data(X,Y,n_s)
+        X_pre, Y_pre = preprocessing_data(X,Y,n_s,sensor_positions=sens_pos)
         # to average out differences in results of the model, NN trains stochastically
         model = gp
         # fix random seed for reproducibility
