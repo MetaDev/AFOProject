@@ -10,21 +10,21 @@ from sklearn.preprocessing import StandardScaler, normalize
 
 
 from sklearn import linear_model
-import vector_calc as vc
+
 
 # read input
 data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
 result_path = r'C:\Users\Administrator\Google Drive\Windows\Research\Project\Docs\simple_AFO_results.xlsx'
-data_type = 2
+data_type = 0
 n_sensor_axis = 1
 axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
 # name_afo_project = "_cylinder"
-# name_afo_project = "_rot_cube"
-name_afo_project = "_simple_afo"
+name_afo_project = "_rot_cube"
+# name_afo_project = "_simple_afo"
 #the length (in dm) from the deformed object is used to calculate the angle based on displacement
 length=0.1
 if data_type == 0:
-    x_file = "\\all_strain_list_simple" + name_afo_project
+    x_file = "\\all_strain_list" + name_afo_project
 elif data_type == 1:
     x_file = "\\surface_strain_list" + name_afo_project
 else:
@@ -33,6 +33,7 @@ disp_vectors = "\\displacement_list"+ name_afo_project
 #in mm
 disp_coord = "\\node_coord"+ name_afo_project
 faces_nodes = "\\faces_nodes"+ name_afo_project
+print(data_path + x_file)
 X = np.load(data_path + x_file + ".npy")
 Y = np.load(data_path + disp_vectors + ".npy")
 
@@ -43,22 +44,13 @@ mesh_triangles_nodes = np.load(data_path + faces_nodes + ".npy")
 #data structure with indexed node strains for each displacement
 disp_node_i_strains=[[disp,dict([ (node_i, strain) for node_i, strain in zip(nodes_i_coord.keys(), strains)])]
                                 for disp, strains in zip(Y,X)] 
-
+print(np.shape(X))
+print(np.shape(Y))
+print(len(list(nodes_i_coord.values())))
+print(np.shape(mesh_triangles_nodes))
 #this data strucutre contains all the data strucutered in a mesh of triangles-> disp, mesh_triangles_by_coord_and_strain
 #I only use the first 3 nodes of a triangle definition, these contain the corners, the other three are midpoints
 #the 3 additional points are used for higher order interpolation
-disp_triangles_coord_strain=[]
-for disp_i_strains in disp_node_i_strains:
-    disp=disp_i_strains[0]
-    i_strains= disp_i_strains[1]
-    triangles=[]
-    for triangle_nodes in mesh_triangles_nodes:
-        triangles.append(
-            [[nodes_i_coord[node_i],i_strains[node_i]] for node_i in triangle_nodes[0:3]]
-        )
-    disp_triangles_coord_strain.append([disp,triangles])
-
-
 disp__triangles__coord_strain = np.array([
     [disp_i_strains[0],
         [
@@ -74,8 +66,6 @@ disp__triangles__coord_strain = np.array([
 ]) 
 
 #two options to interpolate 1, weighted sum of X closest points, interpolate function over all values with barycentric coordinates
-# Y_func_1 =  lambda x, y : x + y
-#2
 
 def calc_uv(p,triangle):
 
@@ -88,6 +78,9 @@ def calc_uv(p,triangle):
     a2=np.linalg.norm(np.cross(f3,f1))/a
     a3=np.linalg.norm(np.cross(f1,f2))/a
     return [a1,a2,a3]
+
+strain_interp=[ scipy.interpolate.LinearNDInterpolator(points=list(nodes_i_coord.values()),values=X[i]) for i in range(len(X))]
+
 def calc_strain_on_point_in_mesh(point,triangles_coord_strain):
     #if any of the areas in calc_uv is outside of [0,1], the point is outside the triangle
     for triangle_c_s in triangles_coord_strain:
@@ -97,26 +90,19 @@ def calc_strain_on_point_in_mesh(point,triangles_coord_strain):
 
     print("point not located on the mesh")
     #return some error if the point is not on the mesh
-#the ranges to train the model on for small simple afo: x=0||2 , y=[0,5], z= [0,10]
-calc_strain_on_point_in_mesh([0,2,2],disp__triangles__coord_strain[0][1])
-#this function can be used to test interpolation as alternative to neural net
-#encode a few points in the interpolation and estimate the rest
-#a different function for each displacement
-# Y_funcs=[ scipy.interpolate.LinearNDInterpolator(point s=Y_coord,values=X[i]) for i in range(len(X))]
-# print(Y_funcs[0](0,2,3))
 
-# for i in range(3):
-#     plt.hist(X[:,0,i], bins='auto')  # arguments are passed to np.histogram
-#     plt.show()
 scalerX = StandardScaler()
 scalerY = StandardScaler()
-def preprocessing_data(X, Y, n_sensors,sensor_positions=None):
+def preprocessing_data(X, Y, n_sensors,sensor_positions=None, scipy_interp=False):
     # extract random n_sensor columns
     if not sensor_positions:
         X = np.delete(X, (tuple(np.random.choice(len(X[0]), len(X[0]) - n_sensors, replace=False))), axis=1)
     else:
-        #calculate interpolated strain value at each point
-        X = np.array([[calc_strain_on_point_in_mesh(pos,disp__t__c_s[1]) 
+        if scipy_interp:
+            X = np.array([ func(sensor_positions) for func in strain_interp])
+        else:
+            #calculate interpolated strain value at each point
+            X = np.array([[calc_strain_on_point_in_mesh(pos,disp__t__c_s[1]) 
                                         for pos in sensor_positions] 
                                              for disp__t__c_s in disp__triangles__coord_strain])
                                                                             
@@ -170,15 +156,17 @@ degree_test= []
 for i, n_s in enumerate(range(10, 11)):
     #the ranges to train the model on for small simple afo: x=0||2 , y=[0,5], z= [0,10]
     import itertools
-    sens_pos=[[i,j,k] for (i,j,k) in itertools.product([0,2],np.linspace(0,5,2),np.linspace(0,10,3))]
+    sens_pos=[[i,j,k] for (i,j,k) in itertools.product([0,2],np.linspace(0,5,3),np.linspace(0,10,4))]
 
     # for evaluation of a model accuracy the sensor layout should be kept constant over trials 
     # X_pre, Y_pre = preprocessing_data(X, Y, n_s)
 
     mse=[]
+ 
     for n in range(n_trials):
         #pick a different layout for each trial for angle evaluation
         X_pre, Y_pre = preprocessing_data(X,Y,n_s,sensor_positions=sens_pos)
+        print(np.shape(X_pre))
         # to average out differences in results of the model, NN trains stochastically
         model = gp
         # fix random seed for reproducibility
@@ -202,7 +190,7 @@ for i, n_s in enumerate(range(10, 11)):
     degree_test.append(evaluate_by_example(X_pre, Y,model,length))
     cv_results.append([n_s, np.mean(np.array(cv_score_mse)[:,0]),
     np.mean(np.array(cv_score_mse)[:,1])])
-print(cv_results)
+print("mse: ",cv_results)
 #plot heatmap
 test_mean=np.mean(degree_test,axis=0).reshape(len(degree_test[0]),-1)
 

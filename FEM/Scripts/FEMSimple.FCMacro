@@ -120,9 +120,8 @@ def runFEA(femmesh, shape, displ_constraint,result_object_name, n_disp=1, disp=(
     fea = FemToolsCcx.FemToolsCcx()
     # number of sensors
 
-    faceNodes = vc.getNodesFromFEMMeshSurface(femmesh, shape)
-    faceNodesCoord = [np.insert( vc.vectorToNPArr(femmesh.getNodeById(i)),0,i) for i in faceNodes]
-    # calculate random location of sensors, the same for every generated sample
+    faceNodes = set(vc.getNodesFromFEMMeshSurface(femmesh, shape))
+    faceNodesCoord = [[[i], vc.vectorToNPArr(femmesh.getNodeById(i))] for i in faceNodes]
     # displacment is in cm
     displacements = np.random.uniform(disp[0], disp[1], size=(n_disp, 2))
     surface_normals = vc.getNormalOfFemmeshSurface(femmesh)
@@ -132,7 +131,7 @@ def runFEA(femmesh, shape, displ_constraint,result_object_name, n_disp=1, disp=(
     surface_strains = []
     surface_proj_strains = []
     all_strains = []
-    #also print the femmesh surface
+    #save the triangles which make up the surface of the femmesh in the form of a node list
     faces_as_nodes = [femmesh.getElementNodes(face) for topoface in shape.Faces for face in femmesh.getFacesByFace(topoface)]
     for disp in displacements:
         displ_constraint.xDisplacement = disp[0]
@@ -150,33 +149,23 @@ def runFEA(femmesh, shape, displ_constraint,result_object_name, n_disp=1, disp=(
 
         # run the analysis
         # all strains
-        all_strains.append([vc.vectorToNPArr(v)
-                            for v in result_object.StrainVectors])
-        # strains on surface
-        surface_strain = [result_object.StrainVectors[i] for i in faceNodes]
-        surface_proj_strains.append(
-            vc.project_3Dstrains_on_mesh_surface(surface_strain, mesh_normal_CS))
-        surface_strains.append(surface_strain)
-    return list(displacements),faceNodesCoord,faces_as_nodes, all_strains, surface_strains, surface_proj_strains
+        #first index strains according to node index
+        #than extract for each node
+        indexed_strains = [[[n],vc.vectorToNPArr(v)]
+                            for n,v in zip(femmesh.Nodes,result_object.StrainVectors)]
+        all_strains.append(indexed_strains)
+
+    return list(displacements),faceNodesCoord,faces_as_nodes, all_strains
 
 
-def print_results(all_strains, surface_strains, surface_proj_strains, disp_list, disp_coord,faces_as_nodes):
+def print_results(all_strains, disp_list, disp_coord,faces_as_nodes):
     # convert to numpy array
-    all_strains_arr = np.array([np.array(strains) for strains in all_strains])
-    surface_strains_arr = np.array(
-        [np.array(strains) for strains in surface_strains])
-    surface_proj_strains_arr = np.array(
-        [np.array(strains) for strains in surface_proj_strains])
+    all_strains_arr = np.array(all_strains)
     disp_arr = np.array(disp_list)
     
 
     np.save(data_path + "\\all_strain_list" +
             "_" + scene_name, all_strains_arr)
-
-    np.save(data_path + "\\surface_strain_list" +
-            "_" + scene_name, surface_strains_arr)
-    np.save(data_path + "\\proj_surface_strain_list" +
-            "_" + scene_name, surface_proj_strains_arr)
     np.save(data_path + "\\displacement_list" +
             "_" + scene_name, disp_arr)
     np.save(data_path + "\\node_coord" +
@@ -188,7 +177,7 @@ def print_results(all_strains, surface_strains, surface_proj_strains, disp_list,
 
 #femmesh, shape,displ_constraint= buildScene()
 # to be used on self built afo scene
-scene_name="simple_afo"
+scene_name="rot_cube"
 if scene_name=="simple_afo":
     femmesh = App.ActiveDocument.getObject(
         "FEMMeshGMSH001").FemMesh
@@ -222,7 +211,7 @@ elif scene_name=="cube":
 elif scene_name=="rot_cube":
     femmesh = App.ActiveDocument.getObject(
         "FEMMeshGMSH").FemMesh
-    shape = App.ActiveDocument.Box.Shape
+    shape = App.ActiveDocument.BooleanFragments.Shape
     result_object_name = "CalculiX_static_results"
     displ_constraint = App.ActiveDocument.getObject(
         "FemConstraintDisplacement")
@@ -232,10 +221,9 @@ elif scene_name=="rot_cube":
 # the number of displacements thus number of points generated
 n_disp = 100
 
-displacements, disp_coord,faces_as_nodes, all_strains, surface_strains, surface_proj_strains = runFEA(femmesh, shape, displ_constraint, result_object_name,
+displacements, node_coord,faces_as_nodes, all_strains, = runFEA(femmesh, shape, displ_constraint, result_object_name,
                                                                            n_disp=n_disp,disp=disp)
-print_results(all_strains, surface_strains,
-              surface_proj_strains, displacements, disp_coord,faces_as_nodes)
+print_results(all_strains, displacements, node_coord,faces_as_nodes)
 
 
 # # post processing of the result
