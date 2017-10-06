@@ -1,6 +1,5 @@
-create dicts out of the data and use pickles instead of np arrays
-refactoring, only save one list of strains
-index all strains by node
+
+fix rotation prediction
 
 
 maybe start using pickle instead of numpy serialisation

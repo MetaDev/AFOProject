@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sklearn.model_selection as ms
 import scipy
-
+import pickle
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel as C
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
@@ -15,56 +15,56 @@ from sklearn import linear_model
 # read input
 data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
 result_path = r'C:\Users\Administrator\Google Drive\Windows\Research\Project\Docs\simple_AFO_results.xlsx'
-data_type = 0
+
 n_sensor_axis = 1
 axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
 # name_afo_project = "_cylinder"
-name_afo_project = "_rot_cube"
-# name_afo_project = "_simple_afo"
+# name_afo_project = "_rot_cube"
+name_afo_project = "_simple_afo"
 #the length (in dm) from the deformed object is used to calculate the angle based on displacement
 length=0.1
-if data_type == 0:
-    x_file = "\\all_strain_list" + name_afo_project
-elif data_type == 1:
-    x_file = "\\surface_strain_list" + name_afo_project
-else:
-    x_file = "\\proj_surface_strain_list" + name_afo_project
+
+x_file = "\\all_strain_list" + name_afo_project
+
 disp_vectors = "\\displacement_list"+ name_afo_project
 #in mm
-disp_coord = "\\node_coord"+ name_afo_project
-faces_nodes = "\\faces_nodes"+ name_afo_project
+node_coord = "\\nodes_coord"+ name_afo_project
+faces_nodes = "\\faces_as_nodes"+ name_afo_project
 print(data_path + x_file)
-X = np.load(data_path + x_file + ".npy")
-Y = np.load(data_path + disp_vectors + ".npy")
+with open(data_path + x_file+ ".pickle", 'rb') as handle:
+    #dict, the encoding is because I am writing with pickle in python 2 and reading in python 3
+    disp_node_i_strains = pickle.load(handle, encoding='iso-8859-1')
+print(disp_node_i_strains[0])
+with open(data_path + disp_vectors+ ".pickle", 'rb') as handle:
+    #list
+    Y = pickle.load(handle, encoding='iso-8859-1')
+with open(data_path + node_coord+ ".pickle", 'rb') as handle:
+    #dict, the index of the dict is casted to a float, thus has to be cast back
+    nodes_i_coord = { int(key) : value for key, value in pickle.load(handle, encoding='iso-8859-1').items()}
+with open(data_path + faces_nodes+ ".pickle", 'rb') as handle:
+    #list
+    mesh_triangles_nodes = pickle.load(handle, encoding='iso-8859-1')
 
-nodes_i_coord = dict([tuple([tup4[0],tup4[1:4]]) for tup4 in np.load(data_path + disp_coord + ".npy")])
+disp_node_strain = np.array([ list(disp_dict.values()) for disp_dict in disp_node_i_strains ])
+disp = np.array(Y)
 
-mesh_triangles_nodes = np.load(data_path + faces_nodes + ".npy")
-
-#data structure with indexed node strains for each displacement
-disp_node_i_strains=[[disp,dict([ (node_i, strain) for node_i, strain in zip(nodes_i_coord.keys(), strains)])]
-                                for disp, strains in zip(Y,X)] 
-print(np.shape(X))
-print(np.shape(Y))
-print(len(list(nodes_i_coord.values())))
-print(np.shape(mesh_triangles_nodes))
 #this data strucutre contains all the data strucutered in a mesh of triangles-> disp, mesh_triangles_by_coord_and_strain
 #I only use the first 3 nodes of a triangle definition, these contain the corners, the other three are midpoints
 #the 3 additional points are used for higher order interpolation
 disp__triangles__coord_strain = np.array([
-    [disp_i_strains[0],
-        [
-            [   
-                [nodes_i_coord[node_i] for node_i in triangle_nodes[0:3]]
-            ,
-                [disp_i_strains[1][node_i] for node_i in triangle_nodes[0:3]]
-            ]
-            for triangle_nodes in mesh_triangles_nodes 
+    
+    [
+        [   
+            [nodes_i_coord[node_i] for node_i in triangle_nodes[0:3]]
+        ,
+            [nodes_strains[node_i] for node_i in triangle_nodes[0:3]]
         ]
+        for triangle_nodes in mesh_triangles_nodes 
     ]
-    for disp_i_strains in disp_node_i_strains
+    
+    for nodes_strains in disp_node_i_strains
 ]) 
-
+print(disp__triangles__coord_strain[0])
 #two options to interpolate 1, weighted sum of X closest points, interpolate function over all values with barycentric coordinates
 
 def calc_uv(p,triangle):
@@ -79,7 +79,8 @@ def calc_uv(p,triangle):
     a3=np.linalg.norm(np.cross(f1,f2))/a
     return [a1,a2,a3]
 
-strain_interp=[ scipy.interpolate.LinearNDInterpolator(points=list(nodes_i_coord.values()),values=X[i]) for i in range(len(X))]
+strain_interp=[ scipy.interpolate.LinearNDInterpolator(
+            points=list(nodes_i_coord.values()),values=nodes_strain) for nodes_strain in disp_node_strain]
 
 def calc_strain_on_point_in_mesh(point,triangles_coord_strain):
     #if any of the areas in calc_uv is outside of [0,1], the point is outside the triangle
@@ -93,7 +94,7 @@ def calc_strain_on_point_in_mesh(point,triangles_coord_strain):
 
 scalerX = StandardScaler()
 scalerY = StandardScaler()
-def preprocessing_data(X, Y, n_sensors,sensor_positions=None, scipy_interp=False):
+def preprocessing_data(X, Y, n_sensors,sensor_positions=None, scipy_interp=True):
     # extract random n_sensor columns
     if not sensor_positions:
         X = np.delete(X, (tuple(np.random.choice(len(X[0]), len(X[0]) - n_sensors, replace=False))), axis=1)
@@ -102,9 +103,9 @@ def preprocessing_data(X, Y, n_sensors,sensor_positions=None, scipy_interp=False
             X = np.array([ func(sensor_positions) for func in strain_interp])
         else:
             #calculate interpolated strain value at each point
-            X = np.array([[calc_strain_on_point_in_mesh(pos,disp__t__c_s[1]) 
+            X = np.array([[calc_strain_on_point_in_mesh(pos,t__c_s) 
                                         for pos in sensor_positions] 
-                                             for disp__t__c_s in disp__triangles__coord_strain])
+                                             for t__c_s in disp__triangles__coord_strain])
                                                                             
     # extract x axis value
     X = X[:, :, axis_training[n_sensor_axis]]
@@ -165,7 +166,7 @@ for i, n_s in enumerate(range(10, 11)):
  
     for n in range(n_trials):
         #pick a different layout for each trial for angle evaluation
-        X_pre, Y_pre = preprocessing_data(X,Y,n_s,sensor_positions=sens_pos)
+        X_pre, Y_pre = preprocessing_data(disp_node_strain,disp,n_s,sensor_positions=sens_pos)
         print(np.shape(X_pre))
         # to average out differences in results of the model, NN trains stochastically
         model = gp

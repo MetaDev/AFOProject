@@ -6,7 +6,7 @@ import Part
 import Fem
 import FemGmshTools
 import ObjectsFem
-
+import pickle
 import numpy as np
 import itertools
 import utility
@@ -118,10 +118,8 @@ def runFEA(femmesh, shape, displ_constraint,result_object_name, n_disp=1, disp=(
 
     # FemGui.setActiveAnalysis(FreeCAD.ActiveDocument.Analysis)
     fea = FemToolsCcx.FemToolsCcx()
-    # number of sensors
 
-    faceNodes = set(vc.getNodesFromFEMMeshSurface(femmesh, shape))
-    faceNodesCoord = [[[i], vc.vectorToNPArr(femmesh.getNodeById(i))] for i in faceNodes]
+    
     # displacment is in cm
     displacements = np.random.uniform(disp[0], disp[1], size=(n_disp, 2))
     surface_normals = vc.getNormalOfFemmeshSurface(femmesh)
@@ -133,6 +131,7 @@ def runFEA(femmesh, shape, displ_constraint,result_object_name, n_disp=1, disp=(
     all_strains = []
     #save the triangles which make up the surface of the femmesh in the form of a node list
     faces_as_nodes = [femmesh.getElementNodes(face) for topoface in shape.Faces for face in femmesh.getFacesByFace(topoface)]
+    nodes_coord = dict([(i, vc.vectorToNPArr(femmesh.getNodeById(i))) for i in femmesh.Nodes])
     for disp in displacements:
         displ_constraint.xDisplacement = disp[0]
         displ_constraint.yDisplacement = disp[1]
@@ -151,33 +150,29 @@ def runFEA(femmesh, shape, displ_constraint,result_object_name, n_disp=1, disp=(
         # all strains
         #first index strains according to node index
         #than extract for each node
-        indexed_strains = [[[n],vc.vectorToNPArr(v)]
-                            for n,v in zip(femmesh.Nodes,result_object.StrainVectors)]
+        indexed_strains = dict([(n,vc.vectorToNPArr(v))
+                            for n,v in zip(femmesh.Nodes,result_object.StrainVectors)])
         all_strains.append(indexed_strains)
 
-    return list(displacements),faceNodesCoord,faces_as_nodes, all_strains
+    return list(displacements),nodes_coord,faces_as_nodes, all_strains
 
 
-def print_results(all_strains, disp_list, disp_coord,faces_as_nodes):
+def print_results(all_strains, disp_list, nodes_coord,faces_as_nodes):
     # convert to numpy array
-    all_strains_arr = np.array(all_strains)
-    disp_arr = np.array(disp_list)
+    with open(data_path + "\\all_strain_list" + "_" + scene_name + ".pickle", 'wb') as handle:
+        pickle.dump(all_strains, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(data_path + "\\displacement_list" +"_" + scene_name + ".pickle", 'wb') as handle:
+        pickle.dump(disp_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(data_path + "\\nodes_coord" +"_" + scene_name+ ".pickle", 'wb') as handle:
+        pickle.dump(nodes_coord, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open(data_path + "\\faces_as_nodes" +"_" + scene_name+ ".pickle", 'wb') as handle:
+        pickle.dump(faces_as_nodes, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
-
-    np.save(data_path + "\\all_strain_list" +
-            "_" + scene_name, all_strains_arr)
-    np.save(data_path + "\\displacement_list" +
-            "_" + scene_name, disp_arr)
-    np.save(data_path + "\\node_coord" +
-            "_" + scene_name, np.array(disp_coord))
-    np.save(data_path + "\\faces_nodes" +
-            "_" + scene_name, np.array(faces_as_nodes))
-            
 
 
 #femmesh, shape,displ_constraint= buildScene()
 # to be used on self built afo scene
-scene_name="rot_cube"
+scene_name="simple_afo"
 if scene_name=="simple_afo":
     femmesh = App.ActiveDocument.getObject(
         "FEMMeshGMSH001").FemMesh
@@ -221,9 +216,9 @@ elif scene_name=="rot_cube":
 # the number of displacements thus number of points generated
 n_disp = 100
 
-displacements, node_coord,faces_as_nodes, all_strains, = runFEA(femmesh, shape, displ_constraint, result_object_name,
+displacements, nodes_coord,faces_as_nodes, all_strains, = runFEA(femmesh, shape, displ_constraint, result_object_name,
                                                                            n_disp=n_disp,disp=disp)
-print_results(all_strains, displacements, node_coord,faces_as_nodes)
+print_results(all_strains, displacements, nodes_coord,faces_as_nodes)
 
 
 # # post processing of the result
