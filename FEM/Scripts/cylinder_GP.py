@@ -19,8 +19,8 @@ result_path = r'C:\Users\Administrator\Google Drive\Windows\Research\Project\Doc
 n_sensor_axis = 1
 axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
 # name_afo_project = "_cylinder"
-# name_afo_project = "_rot_cube"
-name_afo_project = "_simple_afo"
+name_afo_project = "_rot_cube"
+# name_afo_project = "_simple_afo"
 #the length (in dm) from the deformed object is used to calculate the angle based on displacement
 length=0.1
 
@@ -30,11 +30,11 @@ disp_vectors = "\\displacement_list"+ name_afo_project
 #in mm
 node_coord = "\\nodes_coord"+ name_afo_project
 faces_nodes = "\\faces_as_nodes"+ name_afo_project
-print(data_path + x_file)
+
 with open(data_path + x_file+ ".pickle", 'rb') as handle:
     #dict, the encoding is because I am writing with pickle in python 2 and reading in python 3
     disp_node_i_strains = pickle.load(handle, encoding='iso-8859-1')
-print(disp_node_i_strains[0])
+
 with open(data_path + disp_vectors+ ".pickle", 'rb') as handle:
     #list
     Y = pickle.load(handle, encoding='iso-8859-1')
@@ -64,7 +64,7 @@ disp__triangles__coord_strain = np.array([
     
     for nodes_strains in disp_node_i_strains
 ]) 
-print(disp__triangles__coord_strain[0])
+
 #two options to interpolate 1, weighted sum of X closest points, interpolate function over all values with barycentric coordinates
 
 def calc_uv(p,triangle):
@@ -151,14 +151,13 @@ gp = GaussianProcessRegressor(kernel=kernel,alpha=0, n_restarts_optimizer=9)
 # # # Use cross_val_score to automatically split, fit, and score.
 # scores = ms.cross_val_score(gp, X_pre, Y_pre, cv=10,scoring="r2")
 # print(scores)
-n_trials = 1
+n_trials = 5
 cv_results = []
 degree_test= []
 for i, n_s in enumerate(range(10, 11)):
     #the ranges to train the model on for small simple afo: x=0||2 , y=[0,5], z= [0,10]
     import itertools
     sens_pos=[[i,j,k] for (i,j,k) in itertools.product([0,2],np.linspace(0,5,3),np.linspace(0,10,4))]
-
     # for evaluation of a model accuracy the sensor layout should be kept constant over trials 
     # X_pre, Y_pre = preprocessing_data(X, Y, n_s)
 

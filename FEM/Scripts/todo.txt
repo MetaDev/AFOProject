@@ -1,15 +1,14 @@
+impute missing strain with auto encoder
+https://github.com/pkmital/tensorflow_tutorials
+use 3D autoencoder
+https://stackoverflow.com/questions/41830723/batch-normalization-with-3d-convolutions-in-tensorflow
 
-fix rotation prediction
 
 
-maybe start using pickle instead of numpy serialisation
 
-test rotation again, the data generation was not correct
-
-test whether specific choice of strain location can help with prediction for rotation
+fix rotation prediction, different position of sensors (brute force?)
 
 TF tutorial
 
 find relevance of sensor thourgh feature relevance analysis: https://www.analyticsvidhya.com/blog/2016/12/introduction-to-feature-selection-methods-with-an-example-or-how-to-select-the-right-variables/
-
 optimize sensor placement with bayes optimisation
