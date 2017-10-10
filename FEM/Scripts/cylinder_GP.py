@@ -19,8 +19,8 @@ result_path = r'C:\Users\Administrator\Google Drive\Windows\Research\Project\Doc
 n_sensor_axis = 1
 axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
 # name_afo_project = "_cylinder"
-name_afo_project = "_rot_cube"
-# name_afo_project = "_simple_afo"
+# name_afo_project = "_rot_cube"
+name_afo_project = "_simple_afo"
 #the length (in dm) from the deformed object is used to calculate the angle based on displacement
 length=0.1
 

@@ -65,6 +65,7 @@ disp__triangles__coord_strain = np.array([
     for nodes_strains in disp_node_i_strains
 ]) 
 
+
 #two options to interpolate 1, weighted sum of X closest points, interpolate function over all values with barycentric coordinates
 
 def calc_uv(p,triangle):
@@ -113,7 +114,7 @@ def preprocessing_data(X, Y, n_sensors=-1,sensor_positions=None, scipy_interp=Tr
     # scale to mean 0 and unit variance
     X = scalerX.fit_transform(X)
     noise=np.random.normal(0,0.1,np.shape(X))
-    X=X+noise
+    # X=X+noise
     Y = scalerY.fit_transform(Y)
     return X, Y
 
@@ -127,26 +128,11 @@ print(np.shape(X_pre))
 
 import math
 
-def autoencoder(dimensions):
-    """Build a deep autoencoder w/ tied weights.
-    Parameters
-    ----------
-    dimensions : list, optional
-        The number of neurons for each layer of the autoencoder.
-    Returns
-    -------
-    x : Tensor
-        Input placeholder to the network
-    z : Tensor
-        Inner-most latent representation
-    y : Tensor
-        Output reconstruction of the input
-    cost : Tensor
-        Overall cost to use for training
-    """
+def autoencoder_reconstruct(dimensions):
     #input to the network
-    x = tf.placeholder(tf.float32, [None, dimensions[0]], name='x')
-    current_input = x
+    x_full = tf.placeholder(tf.float32, [None, dimensions[0]], name='x_f')
+    x_partial = tf.placeholder(tf.float32, [None, dimensions[0]], name='x_p')
+    current_input = x_partial
 
     # Build the encoder
     encoder = []
@@ -176,8 +162,8 @@ def autoencoder(dimensions):
     y = current_input
 
     # cost function is the me
-    cost = tf.reduce_mean(tf.square(tf.subtract(y, x)))
-    return {'x': x, 'z': z, 'y': y, 'cost': cost}
+    cost = tf.reduce_mean(tf.square(tf.subtract(y, x_full)))
+    return {'x_p': x_partial,'x_f': x_full, 'z': z, 'y': y, 'cost': cost}
 
 def regressor(dimensions):
 
@@ -198,25 +184,27 @@ def regressor(dimensions):
             output = tf.nn.relu(tf.matmul(current_input, W) + b)
         current_input = output
     # cost function is the me
-    cost = tf.reduce_mean(tf.square(tf.subtract(y, output)))
+    cost = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(y, output))))
     return {'x': x, 'y': y, 'cost': cost}
-def train_ae(X):
+def train_ae_reconstruct(X_partial,X):
     tf.reset_default_graph()
     learning_rate = 0.001
-    ae = autoencoder(dimensions=[len(X[0]), 512,256, 32])
+    ae = autoencoder_reconstruct(dimensions=[len(X[0]), 512,256, 32])
+    print(ae)
     optimizer = tf.train.AdamOptimizer(learning_rate).minimize(ae['cost'])
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
-    n_epochs = 400
+    n_epochs = 100
     for epoch_i in range(n_epochs):
-        sess.run(optimizer, feed_dict={ae['x']: X})
+        sess.run(optimizer, feed_dict={ae['x_p']: X_partial,ae['x_f']: X_full})
         #to get the values of the latent variables 
         # print(epoch_i, sess.run(ae['z'], feed_dict={ae['x']: X_pre}))
-        print(epoch_i, sess.run(ae['cost'], feed_dict={ae['x']: X}))
+        print(epoch_i, sess.run(ae['cost'], feed_dict={ae['x_p']: X_partial,ae['x_f']: X_full}))
+    return ae,sess
     
-def train_regr(X,Y):
+def train_regr(X,Y,dimensions=[], n_epochs=400):
     tf.reset_default_graph()
-    regr_dicts = regressor(dimensions=[len(X[0]),16,len(Y[0])])
+    regr_dicts = regressor(dimensions=[len(X[0]),*dimensions,len(Y[0])])
 
     learning_rate = 0.1
 
@@ -227,18 +215,40 @@ def train_regr(X,Y):
     sess.run(tf.global_variables_initializer())
     # Fit all training data
 
-    n_epochs = 400
     for epoch_i in range(n_epochs):
         sess.run(optimizer, feed_dict={regr_dicts['x']: X,regr_dicts['y']: Y})
         print(epoch_i, sess.run(regr_dicts['cost'], feed_dict={regr_dicts['x']: X,regr_dicts['y']: Y}))
+    return regr_dicts,sess
 print(len(disp))
-X_full,_= preprocessing_data(disp_node_strain,disp)
-# X=disp_node_strain[:, :, axis_training[n_sensor_axis]]
-# X = X.reshape(len(X), -1)
+#preprocess data, in this case only flattening and normalisation
+X_full,Y_full= preprocessing_data(disp_node_strain,disp)
+X_partial_small,_=preprocessing_data(disp_node_strain,disp,n_sensors=20)
 
-train_ae(X_full)
+
+# from deepautoencoder import StackedAutoEncoder
+# ae = StackedAutoEncoder(dims=[ 512,256, 32], activations=['relu', 'relu','relu'], noise='gaussian', epoch=[400,200,200],
+#                             loss='rmse', lr=0.007, batch_size=100, print_step=20)
+#ae.fit(X)
+
 #put all but a few values to 0
+n_sensors=20
+default= np.zeros((len(X_full[0]) - n_sensors,(len(X_full))))
+X_partial=np.copy(X_full)
+X_partial[:,(tuple(np.random.choice(len(X_full[0]), len(X_full[0]) - n_sensors, replace=False)))] = default.T
+print(np.shape(X_full))
+ae,ae_sess=train_ae_reconstruct(X_partial,X_full)
+print(np.count_nonzero(X_partial[0]))
+X_full_imputed=ae_sess.run(ae['y'],feed_dict={ae['x_p']:X_partial})
+print(np.count_nonzero(X_full_imputed[0]))
+#train the regressor on X-full and estimate with x full imputed
+regr_dicts,regr_sess=train_regr(X_full,Y_full,dimensions=[256],n_epochs=100)
+regr_small_dicts,regr_small_sess=train_regr(X_partial_small,Y_full,dimensions=[32],n_epochs=100)
+print(np.shape(X_full_imputed))
+#predict
+result=regr_sess.run([regr_dicts['y'],regr_dicts['cost']],feed_dict={regr_dicts['x']: X_full_imputed,regr_dicts['y']: Y_full})
+result_small=regr_small_sess.run([regr_small_dicts['y'],regr_small_dicts['cost']],
+    feed_dict={regr_small_dicts['x']: X_partial_small,regr_small_dicts['y']: Y_full})
 
-train_regr(X,Y)
-
-
+print(result[1])
+print(result_small[1])
+#evaluate

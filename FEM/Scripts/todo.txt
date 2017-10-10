@@ -1,14 +1,18 @@
-impute missing strain with auto encoder
-https://github.com/pkmital/tensorflow_tutorials
+idea to keep in mind: the ae is used to impute data, the more it understands the underlying structure
+of the data, generalizes, the better it will work
+
+to better compare ae vs non ae approach test different ratios of number of sensors and find maybe some where
+it performs better with the encoder
+
+do some refactoring by using some keras code: https://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html
+
 use 3D autoencoder
 https://stackoverflow.com/questions/41830723/batch-normalization-with-3d-convolutions-in-tensorflow
 
 
 
-
 fix rotation prediction, different position of sensors (brute force?)
 
-TF tutorial
 
 find relevance of sensor thourgh feature relevance analysis: https://www.analyticsvidhya.com/blog/2016/12/introduction-to-feature-selection-methods-with-an-example-or-how-to-select-the-right-variables/
 optimize sensor placement with bayes optimisation
