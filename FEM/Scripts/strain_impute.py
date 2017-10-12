@@ -186,7 +186,7 @@ def regressor(dimensions):
     # cost function is the me
     cost = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(y, output))))
     return {'x': x, 'y': y, 'cost': cost}
-def train_ae_reconstruct(X_partial,X):
+def train_ae_reconstruct(X_partial,X,n_epochs=100):
     tf.reset_default_graph()
     learning_rate = 0.001
     ae = autoencoder_reconstruct(dimensions=[len(X[0]), 512,256, 32])
@@ -194,7 +194,6 @@ def train_ae_reconstruct(X_partial,X):
     optimizer = tf.train.AdamOptimizer(learning_rate).minimize(ae['cost'])
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
-    n_epochs = 100
     for epoch_i in range(n_epochs):
         sess.run(optimizer, feed_dict={ae['x_p']: X_partial,ae['x_f']: X_full})
         #to get the values of the latent variables 
@@ -219,36 +218,65 @@ def train_regr(X,Y,dimensions=[], n_epochs=400):
         sess.run(optimizer, feed_dict={regr_dicts['x']: X,regr_dicts['y']: Y})
         print(epoch_i, sess.run(regr_dicts['cost'], feed_dict={regr_dicts['x']: X,regr_dicts['y']: Y}))
     return regr_dicts,sess
-print(len(disp))
+
+
+#get bounds of sensors positions
+
+coords=np.array(list(nodes_i_coord.values()))
+coord_bounds_x=(np.max(coords[:,0]),np.min(coords[:,0]))
+coord_bounds_y=(np.max(coords[:,1]),np.min(coords[:,1]))
+coord_bounds_z=(np.max(coords[:,2]),np.min(coords[:,2]))
+import random
+def random_sens_pos():
+    random.seed(12345)
+    return [random.uniform(*coord_bounds_x),random.uniform(*coord_bounds_y),random.uniform(*coord_bounds_z)]
+rand_pos = [random_sens_pos() for i in range(100)]
+
+#pick a different layout for each trial for angle evaluation
+X_100, Y_100 = preprocessing_data(disp_node_strain,disp,sensor_positions=rand_pos)
 #preprocess data, in this case only flattening and normalisation
-X_full,Y_full= preprocessing_data(disp_node_strain,disp)
-X_partial_small,_=preprocessing_data(disp_node_strain,disp,n_sensors=20)
+# X_full,Y_full= preprocessing_data(disp_node_strain,disp)
+# X_partial_small,_=preprocessing_data(disp_node_strain,disp,n_sensors=20)
 
+#search different sensor amounts and sensors to be recovered
+for n_sensor in range(1,100,2):
+    for n_miss in range(1,50,2):
+        test_sensor_reconstruction(X_100,Y_100,n_sensor,n_miss)
 
-# from deepautoencoder import StackedAutoEncoder
-# ae = StackedAutoEncoder(dims=[ 512,256, 32], activations=['relu', 'relu','relu'], noise='gaussian', epoch=[400,200,200],
-#                             loss='rmse', lr=0.007, batch_size=100, print_step=20)
-#ae.fit(X)
+def test_sensor_reconstruction(X,Y,n_sensor,n_missing):
+    #train and test 3 networks 1 on n_sens- missing sensors, two on the full amount of sensors but with one where there
+    #are n_missing sensors ommitted and imputed by ae
 
-#put all but a few values to 0
-n_sensors=20
-default= np.zeros((len(X_full[0]) - n_sensors,(len(X_full))))
-X_partial=np.copy(X_full)
-X_partial[:,(tuple(np.random.choice(len(X_full[0]), len(X_full[0]) - n_sensors, replace=False)))] = default.T
-print(np.shape(X_full))
-ae,ae_sess=train_ae_reconstruct(X_partial,X_full)
-print(np.count_nonzero(X_partial[0]))
-X_full_imputed=ae_sess.run(ae['y'],feed_dict={ae['x_p']:X_partial})
-print(np.count_nonzero(X_full_imputed[0]))
-#train the regressor on X-full and estimate with x full imputed
-regr_dicts,regr_sess=train_regr(X_full,Y_full,dimensions=[256],n_epochs=100)
-regr_small_dicts,regr_small_sess=train_regr(X_partial_small,Y_full,dimensions=[32],n_epochs=100)
-print(np.shape(X_full_imputed))
-#predict
-result=regr_sess.run([regr_dicts['y'],regr_dicts['cost']],feed_dict={regr_dicts['x']: X_full_imputed,regr_dicts['y']: Y_full})
-result_small=regr_small_sess.run([regr_small_dicts['y'],regr_small_dicts['cost']],
-    feed_dict={regr_small_dicts['x']: X_partial_small,regr_small_dicts['y']: Y_full})
+    #cut and corrupt data according to parameters
+    X=X[:,0:n_sensor]
+    X_small=X[:,n_sensor-n_missing]
+    
+    #put all but a few values to 0
+    default= np.zeros((len(X[0]) - n_missing,(len(X))))
+    X_partial=np.copy(X)
+    X_partial[:,(tuple(np.random.choice(len(X[0]), len(X[0]) - n_missing, replace=False)))] = default.T
 
-print(result[1])
-print(result_small[1])
+    from sklearn.cross_validation import train_test_split
+    X_train, X_test, Y_train, Y_test = train_test_split( X, Y, test_size=0.33, random_state=42)
+    X_small_train, X_small_test, Y_small_train, Y_small_test = train_test_split( X_small, Y, test_size=0.33, random_state=42)
+    X_partial_train, X_partial_test,Y_partial_train, Y_partial_test = train_test_split( X_partial, Y, test_size=0.33, random_state=42)
+    
+    ae,ae_sess=train_ae_reconstruct(X_partial_train,X_train,n_epochs=400)
+
+    X_imputed_train=ae_sess.run(ae['y'],feed_dict={ae['x_p']:X_partial_train})
+    X_imputed_test=ae_sess.run(ae['y'],feed_dict={ae['x_p']:X_partial_test})
+
+    #train the regressor on X-full and estimate with x full imputed
+    regr_dicts,regr_sess=train_regr(X_imputed_train,Y,dimensions=[512,64,32],n_epochs=100)
+    regr_small_dicts,regr_small_sess=train_regr(X_small_train,Y,dimensions=[32],n_epochs=100)
+
+    #test
+    result=regr_sess.run([regr_dicts['y'],regr_dicts['cost']],feed_dict={regr_dicts['x']: X_imputed_test,regr_dicts['y']: Y_partial_test})
+    result_big=regr_sess.run([regr_dicts['y'],regr_dicts['cost']],feed_dict={regr_dicts['x']: X_test,regr_dicts['y']: Y_test})
+    result_small=regr_small_sess.run([regr_small_dicts['y'],regr_small_dicts['cost']],
+        feed_dict={regr_small_dicts['x']: X_small_test,regr_small_dicts['y']: Y_test})
+
+    print("imputed missing mse :"+result[1])
+    print("full mse :"+result_big[1])
+    print("missing mse"+result_small[1])
 #evaluate
