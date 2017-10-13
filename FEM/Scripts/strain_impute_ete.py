@@ -193,39 +193,27 @@ def regressor(dimensions,connected_input=None):
         cost = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(y, output))))
     return {'x': x, 'y': y, 'cost': cost}
 
-
-def train_ae_reconstruct(X_partial,X,n_epochs=100,verbose=False):
-    tf.reset_default_graph()
-    learning_rate = 0.001
-    ae = autoencoder_reconstruct(dimensions=[len(X[0]), 512,256, 32])
-    optimizer = tf.train.AdamOptimizer(learning_rate).minimize(ae['cost'])
+def train_ae_regr_end_to_end(X_partial,X,Y,n_epochs=[100,400],verbose=False):
+    ae = autoencoder_reconstruct(dimensions=[len(X[0]), 512,256, 32],stop_gradient=True)
+    regr=regressor(dimensions=[len(X[0]),32,len(Y[0])],connected_input=ae['z'])
+    ae_train_vars= tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='ae')
+    regr_train_vars=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='regr')
+    learning_rate=0.0001
+    train_ae = tf.train.AdamOptimizer(learning_rate).minimize(ae['cost'], var_list= ae_train_vars)
+    train_regr = tf.train.AdamOptimizer(learning_rate).minimize(regr['cost'], var_list= regr_train_vars)
+    both_opt = tf.group(train_ae, train_regr)
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
     for epoch_i in range(n_epochs):
-        sess.run(optimizer, feed_dict={ae['x_p']: X_partial,ae['x_f']: X})
+        sess.run(both_opt, feed_dict={ae['x_p']: X_partial,ae['x_f']: X,regr['x']: X,regr['y']: Y})
         #to get the values of the latent variables 
         # print(epoch_i, sess.run(ae['z'], feed_dict={ae['x']: X_pre}))
         if verbose:
-            print(epoch_i, sess.run(ae['cost'], feed_dict={ae['x_p']: X_partial,ae['x_f']: X}))
-    return ae,sess
-    
-def train_regr(X,Y,dimensions=[], n_epochs=400,verbose=False):
-    tf.reset_default_graph()
-    regr_dicts = regressor(dimensions=[len(X[0]),*dimensions,len(Y[0])])
+            result=sess.run([ae['cost'],ae['y']], feed_dict={ae['x_p']: X_partial,ae['x_f']: X})
+            print(epoch_i, result[0])
+            print(epoch_i, sess.run(regr['cost'],feed_dict={regr_dicts['x']: result[1],regr_dicts['y']: Y}))
+    return ae,regr,sess
 
-    learning_rate = 0.001
-
-    optimizer = tf.train.AdamOptimizer(learning_rate).minimize(regr_dicts['cost'])
-    # We create a session to use the graph
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
-    # Fit all training data
-
-    for epoch_i in range(n_epochs):
-        sess.run(optimizer, feed_dict={regr_dicts['x']: X,regr_dicts['y']: Y})
-        if verbose:
-            print(epoch_i, sess.run(regr_dicts['cost'], feed_dict={regr_dicts['x']: X,regr_dicts['y']: Y}))
-    return regr_dicts,sess
 
 def test_sensor_reconstruction(X,Y,n_sensor,n_missing):
     #train on at least 2 data points
@@ -250,30 +238,13 @@ def test_sensor_reconstruction(X,Y,n_sensor,n_missing):
     X_train, X_test, Y_train, Y_test = train_test_split( X, Y, test_size=0.33, random_state=42)
     X_small_train, X_small_test, Y_small_train, Y_small_test = train_test_split( X_small, Y, test_size=0.33, random_state=42)
     X_partial_train, X_partial_test,Y_partial_train, Y_partial_test = train_test_split( X_partial, Y, test_size=0.33, random_state=42)
-    ae,ae_sess=train_ae_reconstruct(X_partial[trian_indices],X[trian_indices],n_epochs=400)
-
-    X_imputed_train=ae_sess.run(ae['y'],feed_dict={ae['x_p']:X_partial_train})
-    X_imputed_test=ae_sess.run(ae['y'],feed_dict={ae['x_p']:X_partial_test})
-    print(np.shape(X_imputed_train),np.shape(X_imputed_test))
-    #train the regressor on X-full and estimate with x full imputed
-    regr_partial_dicts,regr_partial_sess=train_regr(X_imputed_train,Y_partial_train,dimensions=[512,64,32],n_epochs=200)
-    regr_big_dicts,regr_big_sess=train_regr(X_train,Y_train,dimensions=[512,64,32],n_epochs=200)
-
-    regr_small_dicts,regr_small_sess=train_regr(X_small_train,Y_small_train,dimensions=[32],n_epochs=200)
+    ae,regr,sess= train_ae_regr_end_to_end(X_partial_train,X_train,Y_train)
 
     #test
-    result=regr_partial_sess.run([regr_partial_dicts['y'],regr_partial_dicts['cost']],
-        feed_dict={regr_partial_dicts['x']: X_imputed_test,regr_partial_dicts['y']: Y_partial_test})
-    result_partial=regr_partial_sess.run([regr_partial_dicts['y'],regr_partial_dicts['cost']],
-        feed_dict={regr_partial_dicts['x']: X_partial_test,regr_partial_dicts['y']: Y_partial_test})
-    result_big=regr_big_sess.run([regr_big_dicts['y'],regr_big_dicts['cost']],
-        feed_dict={regr_big_dicts['x']: X_test,regr_big_dicts['y']: Y_test})
-    result_small=regr_small_sess.run([regr_small_dicts['y'],regr_small_dicts['cost']],
-        feed_dict={regr_small_dicts['x']: X_small_test,regr_small_dicts['y']: Y_small_test})
-    print("missing mse: ",str(result_partial[1]))
-    print("imputed missing mse :"+str(result[1]))
-    print("full mse :"+str(result_big[1]))
-    print("small mse"+str(result_small[1]))
+    # result=regr_partial_sess.run([regr_partial_dicts['y'],regr_partial_dicts['cost']],
+    #     feed_dict={regr_partial_dicts['x']: X_imputed_test,regr_partial_dicts['y']: Y_partial_test})
+    
+    # print("small mse"+str(result_small[1]))
 #evaluate
 #get bounds of sensors positions
 

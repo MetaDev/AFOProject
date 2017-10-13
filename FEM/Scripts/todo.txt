@@ -1,7 +1,7 @@
 idea to keep in mind: the ae is used to impute data, the more it understands the underlying structure
 of the data, generalizes, the better it will work
 
-
+test the joint learning of the regr and ae
 
 generate more data in freecad
 
