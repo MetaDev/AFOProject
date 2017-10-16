@@ -4,19 +4,8 @@ of the data, generalizes, the better it will work
 do some refactoring by using some keras code: https://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html
 and add some more advanced features like dropout and early stopping
 
-generate more data in freecad
-
 train ae on different types of missing data
-
-split test and training set with the same indices over all networks
-
-add early stopping to regression training
-
-compare between training of imputed and non imputed
-and compare test on imputed and non imputed (in product)
-
 training same network on different permutations of missing sensors
-
 
 
 use 3D autoencoder

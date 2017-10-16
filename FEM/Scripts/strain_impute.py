@@ -281,7 +281,7 @@ def test_sensor_reconstruction(X,Y,n_sensor,n_missing):
     if (result_latent[1]<result_big[1]):
         print("imputed laten improved over full big model")
     if (result_latent[1]<result_small[1]):
-        print("imputed laten improved over full big model")
+        print("imputed laten improved over full small model")
     print("missing mse: ",str(result_partial[1]))
     print("imputed missing mse :"+str(result[1]))
     print("imputed latent missing mse :"+str(result_latent[1]))
