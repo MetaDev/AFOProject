@@ -180,6 +180,7 @@ if scene_name=="simple_afo":
         "Fusion001001").Shape
     displ_constraint = App.ActiveDocument.getObject(
         "FemConstraintDisplacement")
+    result_object_name = "CalculiX_static_results"
     disp=(-0.16,0.16)
 # cylinder project
 elif scene_name=="cylinder":
@@ -214,7 +215,7 @@ elif scene_name=="rot_cube":
 
 
 # the number of displacements thus number of points generated
-n_disp = 100
+n_disp = 1000
 
 displacements, nodes_coord,faces_as_nodes, all_strains, = runFEA(femmesh, shape, displ_constraint, result_object_name,
                                                                            n_disp=n_disp,disp=disp)

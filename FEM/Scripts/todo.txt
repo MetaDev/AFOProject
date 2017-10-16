@@ -1,7 +1,8 @@
 idea to keep in mind: the ae is used to impute data, the more it understands the underlying structure
 of the data, generalizes, the better it will work
 
-test the joint learning of the regr and ae
+do some refactoring by using some keras code: https://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html
+and add some more advanced features like dropout and early stopping
 
 generate more data in freecad
 
@@ -16,9 +17,7 @@ and compare test on imputed and non imputed (in product)
 
 training same network on different permutations of missing sensors
 
-train ae and other network and to end
 
-do some refactoring by using some keras code: https://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html
 
 use 3D autoencoder
 https://stackoverflow.com/questions/41830723/batch-normalization-with-3d-convolutions-in-tensorflow

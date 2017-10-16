@@ -170,7 +170,7 @@ def autoencoder_reconstruct(dimensions,stop_gradient=False):
 
 def regressor(dimensions,connected_input=None):
     with tf.variable_scope("regr"):
-        if connected_input:
+        if connected_input is not None:
             x=connected_input
         else:
             x = tf.placeholder(tf.float32, [None, dimensions[0]], name='x')
@@ -193,25 +193,26 @@ def regressor(dimensions,connected_input=None):
         cost = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(y, output))))
     return {'x': x, 'y': y, 'cost': cost}
 
-def train_ae_regr_end_to_end(X_partial,X,Y,n_epochs=[100,400],verbose=False):
+def train_ae_regr_end_to_end(X_partial,X,Y,n_epochs=500,verbose=False):
     ae = autoencoder_reconstruct(dimensions=[len(X[0]), 512,256, 32],stop_gradient=True)
-    regr=regressor(dimensions=[len(X[0]),32,len(Y[0])],connected_input=ae['z'])
+    regr=regressor(dimensions=[len(X[0]),32,32,len(Y[0])],connected_input=ae['z'])
     ae_train_vars= tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='ae')
     regr_train_vars=tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='regr')
     learning_rate=0.0001
     train_ae = tf.train.AdamOptimizer(learning_rate).minimize(ae['cost'], var_list= ae_train_vars)
+    learning_rate=0.01
     train_regr = tf.train.AdamOptimizer(learning_rate).minimize(regr['cost'], var_list= regr_train_vars)
     both_opt = tf.group(train_ae, train_regr)
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
     for epoch_i in range(n_epochs):
-        sess.run(both_opt, feed_dict={ae['x_p']: X_partial,ae['x_f']: X,regr['x']: X,regr['y']: Y})
+        sess.run(both_opt, feed_dict={ae['x_p']: X_partial,ae['x_f']: X,regr['y']: Y})
         #to get the values of the latent variables 
         # print(epoch_i, sess.run(ae['z'], feed_dict={ae['x']: X_pre}))
         if verbose:
-            result=sess.run([ae['cost'],ae['y']], feed_dict={ae['x_p']: X_partial,ae['x_f']: X})
-            print(epoch_i, result[0])
-            print(epoch_i, sess.run(regr['cost'],feed_dict={regr_dicts['x']: result[1],regr_dicts['y']: Y}))
+            result=sess.run([ae['cost'],regr['cost']], feed_dict={ae['x_p']: X_partial,ae['x_f']: X,regr['y']: Y})
+            print(epoch_i, "ae loss & regr loss", result[0],result[1])
+            
     return ae,regr,sess
 
 
@@ -241,10 +242,9 @@ def test_sensor_reconstruction(X,Y,n_sensor,n_missing):
     ae,regr,sess= train_ae_regr_end_to_end(X_partial_train,X_train,Y_train)
 
     #test
-    # result=regr_partial_sess.run([regr_partial_dicts['y'],regr_partial_dicts['cost']],
-    #     feed_dict={regr_partial_dicts['x']: X_imputed_test,regr_partial_dicts['y']: Y_partial_test})
+    result=sess.run([ae['cost'],regr['cost']], feed_dict={ae['x_p']: X_partial_test,ae['x_f']: X_test,regr['y']: Y_test})
     
-    # print("small mse"+str(result_small[1]))
+    print("mse regr"+str(result[1]))
 #evaluate
 #get bounds of sensors positions
 
@@ -261,10 +261,9 @@ import itertools
 sens_pos=[[i,j,k] for (i,j,k) in itertools.product([0,2],np.linspace(0,5,8),np.linspace(0,10,8))]
 #pick a different layout for each trial for angle evaluation
 X_100, Y_100 = preprocessing_data(disp_node_strain,disp,sensor_positions=sens_pos)
-# X_100, Y_100 = preprocessing_data(disp_node_strain,disp,n_sensors=100)
-#preprocess data, in this case only flattening and normalisation
-# X_full,Y_full= preprocessing_data(disp_node_strain,disp)
-# X_partial_small,_=preprocessing_data(disp_node_strain,disp,n_sensors=20)
+
+
+test_sensor_reconstruction(X_100,Y_100,10,8)
 
 #search different sensor amounts and sensors to be recovered
 for n_sensor in range(5,50,6):
