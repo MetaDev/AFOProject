@@ -2,6 +2,8 @@ from sklearn.preprocessing import StandardScaler, normalize
 import numpy as np
 
 import pickle
+
+
 def read_data():
     # read input
     data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
@@ -38,7 +40,7 @@ def read_data():
 
     disp_node_strain = np.array([ list(disp_dict.values()) for disp_dict in disp_node_i_strains ])
     disp = np.array(Y)
-    return disp_node_strain,disp
+    return disp_node_strain,disp,nodes_i_coord
 
 def preprocessing_data(X, Y, n_sensors=-1, sensor_axis =[0, 1, 2]):
     
