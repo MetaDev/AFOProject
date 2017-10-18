@@ -102,23 +102,26 @@ ax.set_aspect('equal', adjustable='box')
 plt.show()
 
 
-#todo debug error
 cluster_mse=[]
-for omit_sensor in node_cluster_i:
+for train, test in kfold.split(X, Y):
+    # Fit the model
+    gp.fit(X[train], Y[train])
+    # evaluate the model
+    y_mean, y_cov = gp.predict(X[test], return_cov=True)
+    y_error = np.mean((y_mean-Y[test])**2)
     error_diff=[]
-    for train, test in kfold.split(X, Y):
-        # Fit the model
-        gp.fit(X[train], Y[train])
-        # evaluate the model
+    for omit_sensor in node_cluster_i:
         X_test_omit=X[test]
         X_test_omit[:,omit_sensor]=np.zeros((len(X_test_omit),len(omit_sensor)))
         y_mean_omit, y_cov = gp.predict(X_test_omit, return_cov=True)
-        y_mean, y_cov = gp.predict(X_test, return_cov=True)
         y_error_omit = np.mean((y_mean_omit-Y[test])**2)
+        
+        y_mean, y_cov = gp.predict(X[test], return_cov=True)
         y_error = np.mean((y_mean-Y[test])**2)
         error_diff.append(y_error-y_error_omit)
-    #print(np.mean(mse),np.std(mse))
+#print(np.mean(mse),np.std(mse))
     cluster_mse.append(np.mean(error_diff))
+    
 from pylab import *
 colmap = cm.ScalarMappable(cmap=cm.hsv)
 colmap.set_array(cluster_mse)
