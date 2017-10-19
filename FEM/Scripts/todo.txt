@@ -2,13 +2,9 @@ idea to keep in mind: the ae is used to impute data, the more it understands the
 of the data, generalizes, the better it will work
 
 find relevant sensors
-feature selection with different scoring metrics
-test for each axis of a sensor
-split preporcessing steps of data_prep file in different methods
-compare performance in 
-1. -> zero out and measure difference in mse, visualise with the coord of nodes
-do this in triples of inputs for 3D visualisation
 2. -> use gradient for multivariate importance in neural net
+!!currently visulisation is not very useful because most information is in the largest deformed parts
+which are the wings of the defrmation
 
 
 do some refactoring by using some keras code: https://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html

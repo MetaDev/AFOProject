@@ -70,7 +70,7 @@ def train(X):
 from sklearn.cluster import KMeans
 #to respect the index of the nodes in the data I sort on their node index
 node_pos=[nodes_i_coord[key] for key in sorted(nodes_i_coord.keys())]
-n_clusters=50
+n_clusters=200
 kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(node_pos)
 node_clusters_coord=[[] for i in range(n_clusters)]
 node_cluster_i=[[] for i in range(n_clusters)]
@@ -102,33 +102,49 @@ ax.set_aspect('equal', adjustable='box')
 plt.show()
 
 
-cluster_mse=[]
-for train, test in kfold.split(X, Y):
-    # Fit the model
-    gp.fit(X[train], Y[train])
-    # evaluate the model
-    y_mean, y_cov = gp.predict(X[test], return_cov=True)
-    y_error = np.mean((y_mean-Y[test])**2)
-    error_diff=[]
-    for omit_sensor in node_cluster_i:
-        X_test_omit=X[test]
-        X_test_omit[:,omit_sensor]=np.zeros((len(X_test_omit),len(omit_sensor)))
-        y_mean_omit, y_cov = gp.predict(X_test_omit, return_cov=True)
-        y_error_omit = np.mean((y_mean_omit-Y[test])**2)
-        
-        y_mean, y_cov = gp.predict(X[test], return_cov=True)
-        y_error = np.mean((y_mean-Y[test])**2)
-        error_diff.append(y_error-y_error_omit)
-#print(np.mean(mse),np.std(mse))
-    cluster_mse.append(np.mean(error_diff))
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+
+# Fit the model
+gp.fit(X_train, Y[train])
+# evaluate the model
+y_mean, y_cov = gp.predict(X_test, return_cov=True)
+y_error = np.mean((y_mean-Y_test)**2)
+error_diff=[]
+for omit_sensor in node_cluster_i:
+    X_test_omit=X_test
+    X_test_omit[:,omit_sensor]=np.zeros((len(X_test_omit),len(omit_sensor)))
+    y_mean_omit, y_cov = gp.predict(X_test_omit, return_cov=True)
+    y_error_omit = np.mean((y_mean_omit-Y_test)**2)
     
+    y_mean, y_cov = gp.predict(X_test, return_cov=True)
+    y_error = np.mean((y_mean-Y_test)**2)
+    error_diff.append(y_error_omit-y_error)
+
+
+error_diff=np.array(error_diff)**8
 from pylab import *
-colmap = cm.ScalarMappable(cmap=cm.hsv)
-colmap.set_array(cluster_mse)
-for node_coords,mse in zip(node_clusters_coord,cluster_mse):
+colmap = cm.ScalarMappable(cmap=cm.viridis)
+colmap.set_array(error_diff)
+fig = plt.figure()
+ax = fig.add_subplot(211, projection='3d')
+
+for node_coords,mse in zip(node_clusters_coord,error_diff):
     node_coords = np.array(node_coords).T
-    ax.scatter(node_coords[0], node_coords[1], node_coords[2], c=cm.hsv(mse/max(cluster_mse)), marker='o')
+    ax.scatter(node_coords[0], node_coords[1], node_coords[2], c=cm.viridis(mse/max(error_diff)), marker='o')
 ax.set_aspect('equal', adjustable='box')
 cb = fig.colorbar(colmap)
+
+ax.view_init(elev=10, azim=135)
+
+ax = fig.add_subplot(212, projection='3d')
+
+for node_coords,mse in zip(node_clusters_coord,error_diff):
+    node_coords = np.array(node_coords).T
+    ax.scatter(node_coords[0], node_coords[1], node_coords[2], c=cm.viridis(mse/max(error_diff)), marker='o')
+ax.set_aspect('equal', adjustable='box')
+cb = fig.colorbar(colmap)
+
+ax.view_init(elev=10, azim=45)
 plt.show()
 
