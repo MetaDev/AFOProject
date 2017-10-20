@@ -1,11 +1,13 @@
 idea to keep in mind: the ae is used to impute data, the more it understands the underlying structure
 of the data, generalizes, the better it will work
 
-find relevant sensors
-2. -> use gradient for multivariate importance in neural net
-!!currently visulisation is not very useful because most information is in the largest deformed parts
-which are the wings of the defrmation
+fix data relevance visualisation
 
+continu tutorial tensorflow
+
+
+
+get some more realistic data from VIGO
 
 do some refactoring by using some keras code: https://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html
 and add some more advanced features like dropout and early stopping
@@ -18,5 +20,7 @@ use 3D autoencoder
 https://stackoverflow.com/questions/41830723/batch-normalization-with-3d-convolutions-in-tensorflow
 
 
-fix rotation prediction, different position of sensors (brute force?)
+fix rotation prediction, should be possible when data available vigo
 
+find relevant sensors
+2. -> use gradient for multivariate importance in neural net

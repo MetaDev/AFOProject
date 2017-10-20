@@ -3,14 +3,12 @@ import numpy as np
 
 import pickle
 
-
+sensor_axis={1: [0], 2: [0, 1], 3: [0, 1, 2]}
 def read_data():
     # read input
     data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
     result_path = r'C:\Users\Administrator\Google Drive\Windows\Research\Project\Docs\simple_AFO_results.xlsx'
 
-    n_sensor_axis = 1
-    axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
     # name_afo_project = "_cylinder"
     # name_afo_project = "_rot_cube"
     name_afo_project = "_simple_afo"
@@ -49,7 +47,7 @@ def preprocessing_data(X, Y, n_sensors=-1, sensor_axis =[0, 1, 2]):
     scalerY = StandardScaler()
     # extract random n_sensor columns, -1 means no set reduction
     if n_sensors!=-1:
-        X = np.delete(X, (tuple(np.random.choice(len(X[0]), len(X[0]) - n_sensors, replace=False))), axis=1)
+        X =X[:,np.random.choice(len(X[0]), n_sensors, replace=False)]
                                                                     
     # extract x axis value
     X = X[:, :, sensor_axis]

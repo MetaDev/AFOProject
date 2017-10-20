@@ -1,3 +1,5 @@
+
+#old visualisation version check GP version for newer code
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Activation
@@ -10,44 +12,18 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import normalize
 import vector_calc as vc
 import xlwings as xw
+import data_prep
+import data_relevance
+disp_node_strain,disp,nodes_i_coord=data_prep.read_data()
+#normalise and flatten data
+X,Y,_,_= data_prep.preprocessing_data(disp_node_strain,disp,sensor_axis =[0])
 
+n_sensors=10
+X_ind_rel=data_relevance.calc_most_significant_sensor(X,Y,n_sensors=n_sensors,test_method=2)
+X_ind_rand= np.random.choice(len(X[0]), n_sensors, replace=False)
 
-# read input
-data_path = "C:\\Users\\Administrator\\Google Drive\\Windows\\Research\\Project\\FEM\\Results\\data"
-result_path = r'C:\Users\Administrator\Google Drive\Windows\Research\Project\Docs\simple_AFO_results.xlsx'
-data_type = 2
-n_sensor_axis = 1
-axis_training = {1: [0], 2: [0, 1], 3: [0, 1, 2]}
-name_afo_project = "_cylinder"
-if data_type == 0:
-    x_file = "\\all_strain_list_simple" + name_afo_project
-elif data_type == 1:
-    x_file = "\\surface_strain_list" + name_afo_project
-else:
-    x_file = "\\proj_surface_strain_list" + name_afo_project
-y_file = "\\displacement_list"+ name_afo_project
-
-X = np.load(data_path + x_file + ".npy")
-Y = np.load(data_path + y_file + ".npy")
-scalerX = StandardScaler()
-scalerY = StandardScaler()
-def preprocessing_data(X, Y, n_sensors):
-    # extract random n_sensor columns
-    X = np.delete(X, (tuple(np.random.choice(len(X[0]), len(X[0]) - n_sensors, replace=False))), axis=1)
-    
-    # extract x axis value
-    X = X[:, :, axis_training[n_sensor_axis]]
-    
-    # flatten X
-    X = X.reshape(len(Y), -1)
-    
-    # scale to mean 0 and unit variance
-    X = scalerX.fit_transform(X)
-    noise=np.random.normal(0,0.1,np.shape(X))
-    X=X+noise
-    Y = scalerY.fit_transform(Y)
-    return X, Y
-
+X_rel=X[:,X_ind_rel]
+X_rand=X[:,X_ind_rand]
 
 def build_model(X):
     n_input = len(X[0])
@@ -105,16 +81,16 @@ for i, n_s in enumerate(range(10, 11)):
     cv_score_acc_std = []
     for n in range(n_trials):
         #pick a different layout for each trial for angle evaluation
-        X_pre, Y_pre = preprocessing_data(X, Y, n_s)
+      
         # to average out differences in results of the model, NN trains stochastically
-        model = build_model(X_pre)
+        model = build_model(X_rel)
 
         # fix random seed for reproducibility
         seed = 7
         kfold = ms.KFold(n_splits=5, random_state=seed)
         cvscores_mse = []
         cvscores_val_acc = []
-        for train, test in kfold.split(X_pre, Y_pre):
+        for train, test in kfold.split(X_rel, Y):
             # Fit the model
             history = model.fit(X_pre[train], Y_pre[train], epochs=100,
                                 batch_size=10, verbose=0)
@@ -150,7 +126,7 @@ from scipy.interpolate import griddata
 # define grid.
 xi = np.linspace(-45,25,100)
 yi = np.linspace(-45,25,100)
-zi = griddata(( test_mean[:,0],  test_mean[:,1]), test_mean[:,2]+test_mean[:,3],(xi[None,:], yi[:,None]), method='cubic')
+zi = griddata(( test_mean[:,0],  test_mean[:,1]), test_mean[:,2]+test_mean[:,3],(xi[None,:], yi[:,None]), method='linear')
 # contour the gridded data, plotting dots at the randomly spaced data points.
 CS = plt.contour(xi,yi,zi,15,linewidths=0.5,colors='k')
 CS = plt.contourf(xi,yi,zi,15,cmap=plt.cm.jet)
