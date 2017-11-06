@@ -1,9 +1,16 @@
 idea to keep in mind: the ae is used to impute data, the more it understands the underlying structure
 of the data, generalizes, the better it will work
 
-fix data relevance visualisation
+ask for abaqus on HPC
+
+train model on abaqus data
+
+train on each cluster seperately and check accuracy, data relevance
+
+check running of visualise angle accuracy
 
 continu tutorial tensorflow
+
 
 
 

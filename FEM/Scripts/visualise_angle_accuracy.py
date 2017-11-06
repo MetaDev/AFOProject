@@ -17,7 +17,9 @@ import data_relevance
 disp_node_strain,disp,nodes_i_coord=data_prep.read_data()
 #normalise and flatten data
 X,Y,_,_= data_prep.preprocessing_data(disp_node_strain,disp,sensor_axis =[0])
-
+#TODO
+#test with reduced data
+#X=X[0:100]
 n_sensors=10
 X_ind_rel=data_relevance.calc_most_significant_sensor(X,Y,n_sensors=n_sensors,test_method=2)
 X_ind_rand= np.random.choice(len(X[0]), n_sensors, replace=False)
