@@ -3,6 +3,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 from keras.layers.core import Dropout
 from keras.wrappers.scikit_learn import KerasRegressor
+import numpy as np
 def build_simple_nn(X):
     n_input = len(X[0])
     # create model
@@ -23,3 +24,16 @@ def build_simple_nn(X):
     # Compile model
     model.compile(loss='mse', optimizer=adam, metrics=['mse', 'accuracy'])
     return model
+from sklearn.gaussian_process import GaussianProcessRegressor
+
+import sklearn.model_selection as ms
+def test_GP(X,Y):
+    gp = GaussianProcessRegressor( n_restarts_optimizer=9)
+    X_train, X_test, Y_train, Y_test = ms.train_test_split(X, Y, test_size=0.33, random_state=42)
+
+    # Fit the model
+    gp.fit(X_train, Y_train)
+    # evaluate the model
+    y_mean, y_cov = gp.predict(X_test, return_cov=True)
+    y_error = np.mean((y_mean-Y_test)**2)
+    return y_error

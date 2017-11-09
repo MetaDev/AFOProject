@@ -39,7 +39,7 @@ def read_data():
     disp_node_strain = np.array([ list(disp_dict.values()) for disp_dict in disp_node_i_strains ])
     disp = np.array(Y)
     return disp_node_strain,disp,nodes_i_coord
-
+#TODO change name to normalisation and flatten, remove sensor extraction functionality
 def preprocessing_data(X, Y, n_sensors=-1, sensor_axis =[0, 1, 2]):
     
     

@@ -1,21 +1,18 @@
 idea to keep in mind: the ae is used to impute data, the more it understands the underlying structure
 of the data, generalizes, the better it will work
 
-ask for abaqus on HPC
-
-train model on abaqus data
-
-train on each cluster seperately and check accuracy, data relevance
+wait for new abaqus data for transfer learning of model
+ask for rotation data vigo
 
 check running of visualise angle accuracy
 
 continu tutorial tensorflow
 
+ask for abaqus on HPC
 
 
 
-get some more realistic data from VIGO
-
+for strain impute:
 do some refactoring by using some keras code: https://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html
 and add some more advanced features like dropout and early stopping
 
@@ -25,9 +22,3 @@ training same network on different permutations of missing sensors
 
 use 3D autoencoder
 https://stackoverflow.com/questions/41830723/batch-normalization-with-3d-convolutions-in-tensorflow
-
-
-fix rotation prediction, should be possible when data available vigo
-
-find relevant sensors
-2. -> use gradient for multivariate importance in neural net
