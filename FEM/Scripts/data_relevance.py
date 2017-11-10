@@ -7,7 +7,7 @@ from scipy import stats
 import numpy as np
 import itertools
 
-def calc_most_significant_sensor(X,Y,n_sensors,test_method=0):
+def calc_most_significant_sensor(X,Y,test_method=0):
     scores=[]
     for x,y in itertools.product([0,1,2],[0,1]):
         X_score=np.reshape(X[:,:,x],(len(X),-1))
@@ -25,7 +25,7 @@ def calc_most_significant_sensor(X,Y,n_sensors,test_method=0):
         scores.append(score)
     scores=np.mean(scores,axis=0)
     #return index of max scores
-    return np.array(sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[0:n_sensors]).astype(int)[:,0]
+    return np.array(sorted(enumerate(scores), key=lambda x: x[1], reverse=True)).astype(int)[:,0]
 
 from sklearn.gaussian_process import GaussianProcessRegressor
 
@@ -58,7 +58,19 @@ def test_GP(X,Y):
     y_mean, y_cov = gp.predict(X_test, return_cov=True)
     y_error = np.mean((y_mean-Y_test)**2)
     return y_error
-def visualise_cluster(coords,colors=None,values=None, view_angle=15):
+def visualise_coords(coords,colors,size=100,view_angle=15):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    coords = np.array(coords).T
+    
+    s=ax.scatter(coords[0], coords[1], coords[2], c=colors,s=size, marker='o')
+       
+    #turn off opacity relative to camera distance
+    s.set_edgecolors = s.set_facecolors = lambda *args:None
+    ax.set_aspect('equal', adjustable='box')
+    ax.view_init(elev=10, azim=view_angle)
+    plt.show()
+def visualise_cluster(node_clusters_coord,colors=None,values=None, view_angle=15,size=100):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     colmap = cm.ScalarMappable(cmap=cm.viridis)
@@ -68,9 +80,9 @@ def visualise_cluster(coords,colors=None,values=None, view_angle=15):
     for i,node_coords in enumerate(node_clusters_coord):
         node_coords = np.array(node_coords).T
         if colors is not None:
-            s=ax.scatter(node_coords[0], node_coords[1], node_coords[2], c=colors[i],s=100, marker='o')
+            s=ax.scatter(node_coords[0], node_coords[1], node_coords[2], c=colors[i],s=size, marker='o')
         if values is not None:
-            s=ax.scatter(node_coords[0], node_coords[1], node_coords[2], c=cm.viridis(values[i]),s=100, marker='o')
+            s=ax.scatter(node_coords[0], node_coords[1], node_coords[2], c=cm.viridis(values[i]),s=size, marker='o')
         #turn off opacity relative to camera distance
         s.set_edgecolors = s.set_facecolors = lambda *args:None
     ax.set_aspect('equal', adjustable='box')
@@ -78,29 +90,38 @@ def visualise_cluster(coords,colors=None,values=None, view_angle=15):
         fig.colorbar(colmap)
     ax.view_init(elev=10, azim=view_angle)
     plt.show()
+#returns the nodes closest to the cluster center
+def get_closest_cluster_center(center,node_coords,node_i):
+        return (sorted(zip(node_i,node_coords), key=lambda node_i : np.linalg.norm(node_i[1]-center)))
+def get_3D_clusters(node_coords,n_clusters):
+    kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(node_coords)
+    node_clusters_coord=[[] for i in range(n_clusters)]
+    node_clusters_i=[[] for i in range(n_clusters)]
+    for i,(cluster, node) in enumerate(zip(kmeans.labels_,node_coords)):
+        node_clusters_coord[cluster].append(node)
+        node_clusters_i[cluster].append(i)
+    return node_clusters_i,node_clusters_coord,kmeans.cluster_centers_
+# ##1
+# # test the accuracy difference between relevant strains and random
+# disp_node_strain, disp, nodes_i_coord = data_prep.read_data()
+# #normalise and flatten data
+# X = disp_node_strain
+# Y = disp
+# #extract most significant sensors, and random sensors
+# n_sensors = 10
+# X_ind_rel = calc_most_significant_sensor(
+#     X, Y,  test_method=2)[0:n_sensors]
+# X_ind_rand = np.random.choice(len(X[0]), n_sensors, replace=False)
 
+# X_rel = X[:, X_ind_rel, :]
+# X_rand = X[:, X_ind_rand, :]
+# X_rand, Y, _, _ = data_prep.preprocessing_data(X_rand, Y, sensor_axis=[0])
+# X_rel, Y, _, _ = data_prep.preprocessing_data(X_rel, Y, sensor_axis=[0])
 
-##1
-# test the accuracy difference between relevant strains and random
-disp_node_strain, disp, nodes_i_coord = data_prep.read_data()
-#normalise and flatten data
-X = disp_node_strain
-Y = disp
-#extract most significant sensors, and random sensors
-n_sensors = 10
-X_ind_rel = calc_most_significant_sensor(
-    X, Y, n_sensors=n_sensors, test_method=2)
-X_ind_rand = np.random.choice(len(X[0]), n_sensors, replace=False)
-
-X_rel = X[:, X_ind_rel, :]
-X_rand = X[:, X_ind_rand, :]
-X_rand, Y, _, _ = data_prep.preprocessing_data(X_rand, Y, sensor_axis=[0])
-X_rel, Y, _, _ = data_prep.preprocessing_data(X_rel, Y, sensor_axis=[0])
-
-#compare mse with relevant sensors and with random ones
-#TODO list the position of these sensors
-print(test_GP(X_rand, Y))
-print(test_GP(X_rel, Y))
+# #compare mse with relevant sensors and with random ones
+# #TODO list the position of these sensors
+# print(test_GP(X_rand, Y))
+# print(test_GP(X_rel, Y))
 
 # ##2
 # #visualise the influence of leaving out clusters of nodes on the prediction
@@ -113,7 +134,7 @@ print(test_GP(X_rel, Y))
 
 # #extract most significant sensors, and random sensors
 # n_sensors=10
-# X_ind_rel=calc_most_significant_sensor(X,Y,n_sensors=n_sensors,test_method=2)
+# X_ind_rel=calc_most_significant_sensor(X,Y,test_method=2)[0:n_sensors]
 # X_ind_rand= np.random.choice(len(X[0]), n_sensors, replace=False)
 
 # X_rel=X[:,X_ind_rel]

@@ -1,10 +1,10 @@
 idea to keep in mind: the ae is used to impute data, the more it understands the underlying structure
 of the data, generalizes, the better it will work
 
-wait for new abaqus data for transfer learning of model
-ask for rotation data vigo
+make visual angle work for abaqus data-> units!
 
-check running of visualise angle accuracy
+wait for new abaqus data for transfer learning of model
+
 
 continu tutorial tensorflow
 

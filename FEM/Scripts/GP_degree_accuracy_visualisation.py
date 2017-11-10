@@ -30,15 +30,10 @@ def calc_angle_degree(displacement,length):
     #the first ordinal is x, the second y
     return np.rad2deg(np.tanh(displacement/length))
 
-# Instanciate a Gaussian Process model
-kernel = 1.0 * RBF() \
-    + WhiteKernel()
+# def visualise_accuracy_GP(X_raw,Y_raw):
 
-gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=9)
-
-disp_node_strain,disp,nodes_i_coord=data_prep.read_data()
 #normalise and flatten data
-X,Y,_,scaler_Y= data_prep.preprocessing_data(disp_node_strain,disp,sensor_axis =[0])
+X,Y,_,scaler_Y= data_prep.preprocessing_data(X,Y,sensor_axis =[0])
 
 n_max=10
 
@@ -50,25 +45,18 @@ X_ind_rand= np.random.choice(len(X[0]), n_sensors, replace=False)
 X_rel=X[:,X_ind_rel]
 X_rand=X[:,X_ind_rand]
 X=X_rel
-print(len(X_rel))
+
 X_train, X_test, Y_train, Y_test = ms.train_test_split(X, Y, test_size=0.33, random_state=42)
 
 #pick a different layout for each trial for angle evaluation
 # to average out differences in results of the model, NN trains stochastically
 model = gp
-# fix random seed for reproducibility
-seed = 7
+
 # Fit the model
 model.fit(X_train, Y_train)
 # evaluate the model
 
-y_mean, y_cov = gp.predict(X_test, return_cov=True)
-y_error = np.mean((y_mean-Y_test)**2)
-
-#calc absolute degree error and mse
-mse=y_error * 100
 degree_test=evaluate_by_example(X_test, Y_test,scaler_Y,model)
-print("mse: ",mse)
 #plot heatmap, average over all n sensors
 
 #make the degree error format: angleX,angleY,errorX,errorY
