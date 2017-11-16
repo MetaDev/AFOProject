@@ -26,12 +26,13 @@ def evaluate_by_example(X_pre, Y, data_prep_scalerY,model, length=0.1):
 
 # in my test setup the displacement is in dm and length in mm, thus I have to convert the length to dm by dividing by 100
 # the angle is calculated using the by the cosine rule in straight angle triangles
+# the angle is in radians
 def calc_angle_degree(displacement,length):
     #the first ordinal is x, the second y
     return np.rad2deg(np.tanh(displacement/length))
 
 # def visualise_accuracy_GP(X_raw,Y_raw):
-
+#TODO make function that visualises for any data
 #normalise and flatten data
 X,Y,_,scaler_Y= data_prep.preprocessing_data(X,Y,sensor_axis =[0])
 

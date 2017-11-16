@@ -9,7 +9,7 @@ import itertools
 
 def calc_most_significant_sensor(X,Y,test_method=0):
     scores=[]
-    for x,y in itertools.product([0,1,2],[0,1]):
+    for x,y in itertools.product(range(np.shape(X)[-1]),range(np.shape(Y)[-1])):
         X_score=np.reshape(X[:,:,x],(len(X),-1))
         Y_score=Y[:,y]
         if test_method==0:

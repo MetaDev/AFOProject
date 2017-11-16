@@ -1,15 +1,17 @@
 idea to keep in mind: the ae is used to impute data, the more it understands the underlying structure
 of the data, generalizes, the better it will work
 
-make visual angle work for abaqus data-> units!
+transfer learning between different sensor positions
 
-wait for new abaqus data for transfer learning of model
+test with interpolation-> noisy position required?
+user kernel methods (GP) with set kernels (no position requried) fixed amount
+http://www.cs.columbia.edu/~jebara/papers/Kondor,Jebara_point_set.pdf
 
+the sensor can be identified and thus have a fixed order during use but not between differen layouts
 
-continu tutorial tensorflow
-
-ask for abaqus on HPC
-
+test with RNN, when more data is available, back to freecad?
+I can get many freecad fem models from the forum
+use graph kernel, 3D conv
 
 
 for strain impute:
