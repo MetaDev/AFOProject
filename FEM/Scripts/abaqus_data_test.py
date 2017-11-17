@@ -17,7 +17,7 @@ import data_relevance
 # Hier een voorbeeldje: df[‘NE’][200,10000,0] geeft NE_11 voor frame 200 voor het midden van het element 10000 en 
 # df[‘ANKLE_UR3’][200] geeft de verplaatsingshoek rond de enkelas voor datzelfde frame
 #In verband met de eenheden: lengtes zijn uitgedrukt in mm, hoeken in radialen, stresses in MPa en momenten in Nmm.
-df = np.load("DF30.npz")
+df = np.load("ankle/DF30.npz")
 #import PF30 as well and combine data sets
 
 X=df["NE"]
