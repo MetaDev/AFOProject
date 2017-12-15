@@ -1,6 +1,6 @@
 import numpy as np
 import data_prep
-from sklearn.gaussian_process import GaussianProcessRegressor
+
 import sklearn.model_selection as ms
 import train_model
 import data_relevance
@@ -34,35 +34,55 @@ while len(best_clusters)<n_best_clusters:
     best_clusters.add(c_i)
     ind+=1
 best_cluster_node_inds=np.array(cluster_node_inds)[list(best_clusters)]
+
+
+#1.1
+#This simulates a case of noisy sensors where some sense of sensor position (it's cluster) is preserved
+# make random configurations, make a train and test set of these configurations
+# with enough training data (2000 000) the mse reaches reasonable (<0.1) values
 n_sensors_per_cluster=2
-n_layouts=400
-#make random configurations, make a train and test set of these configurations
+max_n_layouts=4000
 X_layouts=[]
 Y_layouts=[]
-for i in range(n_layouts):
-    sensor_layout_inds=np.array([np.random.choice(inds,n_sensors_per_cluster) for inds in best_cluster_node_inds]).flatten()
-    #use indices to create sets
-    X_reduced=X[:,sensor_layout_inds,:]
-    X_reduced,Y_norm,_,_= data_prep.preprocessing_data(X_reduced,Y, sensor_axis =[0])
-    X_layouts.extend(X_reduced)
-    Y_layouts.extend(Y_norm)
-print(len(Y_layouts))
-#GP has higher error than NN
-#print(train_model.test_GP(X_layouts,Y_layouts)[0])
-history,model=train_model.test_nn_regr(np.array(X_layouts),np.array(Y_layouts))
-print(history.history['val_acc'][-1])
-#test with unseen layout
-sensor_layout_inds=np.array([np.random.choice(inds,n_sensors_per_cluster) for inds in best_cluster_node_inds]).flatten()
-X_reduced=X[:,sensor_layout_inds,:]
-X_reduced,Y_norm,_,_= data_prep.preprocessing_data(X_reduced,Y, sensor_axis =[0])
-scores = model.evaluate(X_reduced, Y_norm)
-print(model.metrics_names[1], scores[1])
-#2 now try to improve training with interpolation
-#do noisy interpolation and train on that data
-#add noise to the position of the nodes
-# elts_coords=np.array(elts_coords)
-# noise = np.random.normal(0, np.min(np.var(elts_coords,axis=None))/10, elts_coords.shape)
-# elts_coords_noise = elts_coords + noise
-# #Define which points will be used for interpolation
-# strain_interp=[ scipy.interpolate.LinearNDInterpolator(
-#             points=list(nodes_i_coord.values()),values=nodes_strain) for nodes_strain in disp_node_strain]
+for n_layouts in range(100,max_n_layouts,200):
+    for i in range(n_layouts):
+        sensor_layout_inds=np.array([np.random.choice(inds,n_sensors_per_cluster) for inds in best_cluster_node_inds]).flatten()
+        #use indices to create sets
+        X_reduced=X[:,sensor_layout_inds,:]
+        X_reduced,Y_norm,_,_= data_prep.preprocessing_data(X_reduced,Y, sensor_axis =[0])
+        X_layouts.extend(X_reduced)
+        Y_layouts.extend(Y_norm)
+    #GP has higher error than NN
+    #print(train_model.test_GP(X_layouts,Y_layouts)[0])
+    print("number of samples", len(X_layouts))
+    history,model=train_model.test_nn_regr(np.array(X_layouts),np.array(Y_layouts),layers=[32,32,32])
+    print("mse", history.history['val_mean_squared_error'][-1])
+
+
+##1.2
+##TODO run on gpu nodes with a lot of data, learning seems to increase
+#more advanced transfer learning by permuting the layouts
+#takes way more data to train (runs for 100 seconds to reach mse 0.8)
+# n_sensors_per_cluster=2
+
+# X_layouts=[]
+# Y_layouts=[]
+# from random import shuffle
+# n_layouts=4000
+
+# for i in range(n_layouts):
+#     sensor_layout_inds=np.random.permutation(np.array([np.random.choice(inds,n_sensors_per_cluster) 
+#                 for inds in best_cluster_node_inds]).flatten())
+#     #use indices to create sets
+#     X_reduced=X[:,sensor_layout_inds,:]
+
+#     X_reduced,Y_norm,_,_= data_prep.preprocessing_data(X_reduced,Y, sensor_axis =[0])
+#     X_layouts.extend(X_reduced)
+#     Y_layouts.extend(Y_norm)
+
+# history,model=train_model.test_nn_regr(np.array(X_layouts),np.array(Y_layouts),layers=[32,64,32])
+# print(history.history['val_mean_squared_error'][-1])
+
+
+##1.3
+##tested mean and variance of latyour data as features to train, but it doesn't train
